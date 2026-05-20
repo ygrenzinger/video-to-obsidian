@@ -1,0 +1,9 @@
+{
+  "id": "video-to-obsidian",
+  "name": "Video To Obsidian",
+  "version": "0.1.0",
+  "minAppVersion": "1.5.0",
+  "description": "Turn YouTube subtitles into traceable Obsidian notes.",
+  "author": "Yannick Grenzinger",
+  "isDesktopOnly": true
+}

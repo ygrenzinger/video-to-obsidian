@@ -1,0 +1,117 @@
+.vto-root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-4);
+  height: 100%;
+  padding: var(--size-4-4);
+  color: var(--text-normal);
+  background: var(--background-primary);
+  overflow: auto;
+}
+
+.vto-panel {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  padding: var(--size-4-4);
+  background: var(--background-secondary);
+}
+
+.vto-row {
+  display: flex;
+  gap: var(--size-4-2);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.vto-row-between {
+  justify-content: space-between;
+}
+
+.vto-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-2);
+}
+
+.vto-input {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+.vto-muted {
+  color: var(--text-muted);
+}
+
+.vto-error {
+  color: var(--text-error);
+}
+
+.vto-chat {
+  max-height: 40vh;
+  overflow: auto;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  padding: var(--size-4-3);
+  background: var(--background-primary);
+}
+
+.vto-message {
+  margin-bottom: var(--size-4-3);
+  white-space: pre-wrap;
+}
+
+.vto-message-role {
+  font-weight: var(--font-semibold);
+  color: var(--text-muted);
+  margin-bottom: var(--size-2-2);
+}
+
+.vto-transcript {
+  max-height: 28vh;
+  overflow: auto;
+  white-space: pre-wrap;
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-smaller);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  padding: var(--size-4-3);
+  background: var(--background-primary);
+}
+
+.vto-runtime-log {
+  max-height: 24vh;
+  overflow: auto;
+  user-select: text;
+  -webkit-user-select: text;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-smaller);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  padding: var(--size-4-3);
+  background: var(--background-primary);
+}
+
+.vto-note-candidate {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  padding: var(--size-4-3);
+  background: var(--background-primary);
+}
+
+@media (max-width: 640px) {
+  .vto-root {
+    padding: var(--size-4-2);
+  }
+
+  .vto-row {
+    align-items: stretch;
+  }
+
+  .vto-row button,
+  .vto-row select,
+  .vto-row input {
+    width: 100%;
+  }
+}

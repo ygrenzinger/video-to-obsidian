@@ -1,0 +1,40 @@
+{
+  "name": "video-to-obsidian",
+  "version": "0.1.0",
+  "description": "Turn YouTube subtitles into traceable Obsidian notes.",
+  "main": "main.js",
+  "packageManager": "pnpm@11.1.2",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "tsc --noEmit --skipLibCheck && node esbuild.config.mjs production",
+    "deploy": "node scripts/build-and-copy-to-vault.mjs",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "obsidian",
+    "youtube",
+    "yt-dlp",
+    "ai"
+  ],
+  "author": "Yannick Grenzinger",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "22.19.19",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "esbuild": "0.25.12",
+    "obsidian": "1.12.3",
+    "typescript": "5.9.3",
+    "vitest": "3.2.4"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "2.0.79",
+    "@ai-sdk/google": "2.0.73",
+    "@ai-sdk/mistral": "2.0.33",
+    "@ai-sdk/openai": "2.0.106",
+    "ai": "5.0.188",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
+    "zod": "4.4.3"
+  }
+}
