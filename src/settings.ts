@@ -68,15 +68,6 @@ export class VideoToObsidianSettingTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
-      .setName('Video notes folder')
-      .addText((text) =>
-        text.setValue(this.plugin.settings.videoNotesFolder).onChange(async (value) => {
-          this.plugin.settings.videoNotesFolder = value.trim() || 'Video notes';
-          await this.plugin.saveSettings();
-        })
-      );
-
-    new Setting(containerEl)
       .setName('Atomic knowledge notes folder')
       .addText((text) =>
         text.setValue(this.plugin.settings.atomicNotesFolder).onChange(async (value) => {

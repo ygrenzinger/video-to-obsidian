@@ -43,7 +43,6 @@ The Obsidian plugin release assets are:
 
 - `yt-dlp executable`: full path to the executable. The plugin does not search common install locations.
 - `YouTube cookies from browser`: optional browser name passed to `yt-dlp --cookies-from-browser`, for example `chrome`, `safari`, `firefox`, or `edge`.
-- `Video notes folder`: defaults to `Video notes`.
 - `Atomic knowledge notes folder`: defaults to `Atomic knowledge notes`.
 - `Maximum Atomic knowledge notes`: defaults to 8.
 - Provider API keys and model IDs for Mistral, Google, Anthropic, and OpenAI.

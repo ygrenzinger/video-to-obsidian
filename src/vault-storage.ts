@@ -43,10 +43,7 @@ export class VaultStorage {
     const existingPath = settings.videoIndex[metadata.url] ?? settings.videoIndex[metadata.id];
     if (existingPath && this.vault.getFileByPath(existingPath)) return existingPath;
 
-    const folder = normalizePath(settings.videoNotesFolder);
-    await this.ensureFolder(folder);
-
-    const path = await this.nextAvailablePath(folder, sanitizeFileName(metadata.title));
+    const path = await this.nextAvailableRootPath(sanitizeFileName(metadata.title));
     await this.vault.create(path, this.videoNoteMarkdown(metadata, subtitle, transcript, providerLabel));
 
     settings.videoIndex[metadata.url] = path;
@@ -102,6 +99,18 @@ export class VaultStorage {
       if (existing) throw new Error(`${current} exists and is not a folder.`);
       await this.vault.createFolder(current);
     }
+  }
+
+  private async nextAvailableRootPath(basename: string): Promise<string> {
+    let candidate = `${basename}.md`;
+    let index = 2;
+
+    while (this.vault.getAbstractFileByPath(candidate)) {
+      candidate = `${basename} ${index}.md`;
+      index += 1;
+    }
+
+    return candidate;
   }
 
   private async nextAvailablePath(folder: string, basename: string): Promise<string> {

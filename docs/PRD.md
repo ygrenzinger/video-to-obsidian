@@ -41,7 +41,6 @@ The MVP is desktop-only. It invokes local process APIs for `yt-dlp`, stores AI p
 21. As an Obsidian user, I want to preview the Transcript after import, so that I can verify the plugin imported the right material.
 22. As an Obsidian user, I want runtime logs for `yt-dlp` and LLM calls, so that I can understand slow or failing operations.
 23. As an Obsidian user, I want to clear runtime logs, so that the UI remains readable during multiple attempts.
-24. As an Obsidian user, I want to configure the folder for Video notes, so that imported sources fit my vault structure.
 25. As an Obsidian user, I want to configure the folder for Atomic knowledge notes, so that extracted notes fit my vault structure.
 26. As an Obsidian user, I want the plugin to create missing folders, so that imports do not fail because a target folder is absent.
 27. As an Obsidian user, I want safe file names for generated notes, so that video titles with unsafe characters do not break vault writes.

@@ -153,8 +153,10 @@ function mergeSettings(
   loaded: Partial<VideoToObsidianSettings>
 ): VideoToObsidianSettings {
   return {
-    ...structuredClone(defaults),
-    ...loaded,
+    ytdlpPath: loaded.ytdlpPath ?? defaults.ytdlpPath,
+    ytdlpCookiesFromBrowser: loaded.ytdlpCookiesFromBrowser ?? defaults.ytdlpCookiesFromBrowser,
+    atomicNotesFolder: loaded.atomicNotesFolder ?? defaults.atomicNotesFolder,
+    maxAtomicNotes: loaded.maxAtomicNotes ?? defaults.maxAtomicNotes,
     providers: {
       ...structuredClone(defaults.providers),
       ...(loaded.providers ?? {})

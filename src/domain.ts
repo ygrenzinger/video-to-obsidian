@@ -10,7 +10,6 @@ export type ProviderSettings = {
 export type VideoToObsidianSettings = {
   ytdlpPath: string;
   ytdlpCookiesFromBrowser: string;
-  videoNotesFolder: string;
   atomicNotesFolder: string;
   maxAtomicNotes: number;
   providers: Record<SupportedProvider, ProviderSettings>;
@@ -79,7 +78,6 @@ export type AtomicNoteCandidate = {
 export const DEFAULT_SETTINGS: VideoToObsidianSettings = {
   ytdlpPath: '',
   ytdlpCookiesFromBrowser: '',
-  videoNotesFolder: 'Video notes',
   atomicNotesFolder: 'Atomic knowledge notes',
   maxAtomicNotes: 8,
   providers: {
