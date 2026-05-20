@@ -4,34 +4,40 @@ import { createMistral } from '@ai-sdk/mistral';
 import { createOpenAI } from '@ai-sdk/openai';
 import type { ModelConfiguration, SupportedProvider, VideoToObsidianSettings } from './domain';
 
-const PROVIDER_PRIORITY: SupportedProvider[] = ['mistral', 'google', 'anthropic', 'openai'];
+const DEFAULT_MODEL_IDS: Record<SupportedProvider, string> = {
+  mistral: 'mistral-small-latest',
+  google: 'gemini-2.0-flash',
+  anthropic: 'claude-3-5-haiku-latest',
+  openai: 'gpt-4o-mini'
+};
 
 export function selectModel(settings: VideoToObsidianSettings): ModelConfiguration {
-  for (const provider of PROVIDER_PRIORITY) {
-    const providerSettings = settings.providers[provider];
-    if (!providerSettings.apiKey.trim()) continue;
+  const provider = settings.aiProvider;
+  const apiKey = settings.aiApiKey.trim();
+  const modelId = settings.aiModelId.trim() || DEFAULT_MODEL_IDS[provider];
 
-    switch (provider) {
-      case 'mistral': {
-        const instance = createMistral({ apiKey: providerSettings.apiKey.trim() });
-        return { provider, modelId: providerSettings.modelId, model: instance(providerSettings.modelId) };
-      }
-      case 'google': {
-        const instance = createGoogleGenerativeAI({ apiKey: providerSettings.apiKey.trim() });
-        return { provider, modelId: providerSettings.modelId, model: instance(providerSettings.modelId) };
-      }
-      case 'anthropic': {
-        const instance = createAnthropic({ apiKey: providerSettings.apiKey.trim() });
-        return { provider, modelId: providerSettings.modelId, model: instance(providerSettings.modelId) };
-      }
-      case 'openai': {
-        const instance = createOpenAI({ apiKey: providerSettings.apiKey.trim() });
-        return { provider, modelId: providerSettings.modelId, model: instance(providerSettings.modelId) };
-      }
-    }
+  if (!apiKey) {
+    throw new Error(`Set the ${provider} API key in the plugin settings.`);
   }
 
-  throw new Error('Configure at least one AI provider API key in the plugin settings.');
+  switch (provider) {
+    case 'mistral': {
+      const instance = createMistral({ apiKey });
+      return { provider, modelId, model: instance(modelId) };
+    }
+    case 'google': {
+      const instance = createGoogleGenerativeAI({ apiKey });
+      return { provider, modelId, model: instance(modelId) };
+    }
+    case 'anthropic': {
+      const instance = createAnthropic({ apiKey });
+      return { provider, modelId, model: instance(modelId) };
+    }
+    case 'openai': {
+      const instance = createOpenAI({ apiKey });
+      return { provider, modelId, model: instance(modelId) };
+    }
+  }
 }
 
 export function configuredProviderLabel(settings: VideoToObsidianSettings): string {
@@ -39,6 +45,6 @@ export function configuredProviderLabel(settings: VideoToObsidianSettings): stri
     const config = selectModel(settings);
     return `${config.provider} (${config.modelId})`;
   } catch {
-    return 'No AI provider configured';
+    return `${settings.aiProvider} (not configured)`;
   }
 }

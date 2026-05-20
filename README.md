@@ -14,7 +14,7 @@ Video To Obsidian is an Obsidian desktop plugin that turns YouTube subtitles int
 
 - Obsidian desktop.
 - `yt-dlp` installed and configured by full executable path in plugin settings, such as `/opt/homebrew/bin/yt-dlp`.
-- At least one AI provider API key configured in plugin settings.
+- One AI provider selected in plugin settings, with its required API key configured.
 
 ## Development
 
@@ -40,6 +40,8 @@ The Obsidian plugin release assets are:
 ## Settings
 
 - `yt-dlp executable`: full path to the executable. The plugin does not search common install locations.
-- Provider API keys and model IDs for Mistral, Google, Anthropic, and OpenAI.
+- `AI provider`: select Mistral, Google, Anthropic, or OpenAI.
+- `API key`: required key for the selected provider.
+- `Model ID`: optional override. Leave empty to use the selected provider's default model.
 
-Provider keys are stored in Obsidian plugin data as plain text.
+The selected provider key is stored in Obsidian plugin data as plain text.

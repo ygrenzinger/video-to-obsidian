@@ -4,6 +4,7 @@ import { ChatService } from './chat-service';
 import {
   DEFAULT_SETTINGS,
   type ChatMessage,
+  type SupportedProvider,
   type VideoSession,
   type VideoToObsidianSettings
 } from './domain';
@@ -149,12 +150,44 @@ function mergeSettings(
   defaults: VideoToObsidianSettings,
   loaded: Partial<VideoToObsidianSettings>
 ): VideoToObsidianSettings {
+  const migratedAiSettings = migrateAiSettings(defaults, loaded);
+
   return {
     ytdlpPath: loaded.ytdlpPath ?? defaults.ytdlpPath,
-    providers: {
-      ...structuredClone(defaults.providers),
-      ...(loaded.providers ?? {})
-    },
+    ...migratedAiSettings,
     videoIndex: loaded.videoIndex ?? {}
+  };
+}
+
+function migrateAiSettings(
+  defaults: VideoToObsidianSettings,
+  loaded: Partial<VideoToObsidianSettings> & {
+    providers?: Partial<Record<SupportedProvider, { apiKey?: string; modelId?: string }>>;
+  }
+): Pick<VideoToObsidianSettings, 'aiProvider' | 'aiApiKey' | 'aiModelId'> {
+  if (loaded.aiProvider) {
+    return {
+      aiProvider: loaded.aiProvider,
+      aiApiKey: loaded.aiApiKey ?? defaults.aiApiKey,
+      aiModelId: loaded.aiModelId ?? defaults.aiModelId
+    };
+  }
+
+  const providers: SupportedProvider[] = ['mistral', 'google', 'anthropic', 'openai'];
+  for (const provider of providers) {
+    const providerSettings = loaded.providers?.[provider];
+    if (providerSettings?.apiKey?.trim()) {
+      return {
+        aiProvider: provider,
+        aiApiKey: providerSettings.apiKey.trim(),
+        aiModelId: providerSettings.modelId?.trim() ?? defaults.aiModelId
+      };
+    }
+  }
+
+  return {
+    aiProvider: defaults.aiProvider,
+    aiApiKey: defaults.aiApiKey,
+    aiModelId: defaults.aiModelId
   };
 }

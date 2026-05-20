@@ -18,7 +18,7 @@ After import, the user can click `Generate summary` to create structured LLM con
 
 After import, the user can chat with the Transcript through a configured AI provider. The chat prompt uses the Transcript as the primary evidence source, allows external knowledge only when the user explicitly asks for it, and requires unsupported answers to say what is missing. Each completed answer has its own save action, which appends that question-and-answer turn to the Video note before the Transcript.
 
-The MVP is desktop-only. It invokes local process APIs for `yt-dlp`, stores AI provider keys in Obsidian plugin data, and prioritizes traceability, setup clarity, and simple Markdown ownership over mobile support or a companion service.
+The MVP is desktop-only. It invokes local process APIs for `yt-dlp`, stores the selected AI provider key in Obsidian plugin data, and prioritizes traceability, setup clarity, and simple Markdown ownership over mobile support or a companion service.
 
 ## User Stories
 
@@ -68,13 +68,15 @@ The MVP is desktop-only. It invokes local process APIs for `yt-dlp`, stores AI p
 44. As an Obsidian user, I want saved chat answers to be marked as saved in the UI, so that I do not accidentally save the same answer repeatedly.
 45. As an Obsidian user, I want runtime logs for `yt-dlp` and LLM calls, so that I can understand slow or failing operations.
 46. As an Obsidian user, I want to clear runtime logs, so that the UI remains readable during multiple attempts.
-47. As an Obsidian user, I want to configure at least one AI provider API key and model ID, so that generated Video note content and chat can run.
-48. As an Obsidian user, I want support for Mistral, Google, Anthropic, and OpenAI, so that I can use a provider available to my account and budget.
-49. As an Obsidian user, I want provider keys stored in Obsidian plugin data for the MVP, so that setup is simple.
-50. As an Obsidian user, I want clear failure guidance when no provider key is configured, so that I know what to set up.
-51. As an Obsidian user, I want all generated knowledge to remain in my vault as Markdown, so that I retain ownership and can edit notes manually.
-52. As an Obsidian user, I want generated content to use consistent prompt rules across chat and summary generation, so that both workflows preserve traceability.
-53. As an Obsidian user, I want the plugin to avoid creating separate generated notes, so that source context remains consolidated in the Video note.
+47. As an Obsidian user, I want to select one AI provider, so that generated Video note content and chat use the API I intend.
+48. As an Obsidian user, I want the selected provider API key to be required, so that LLM actions fail early with clear setup guidance when the key is missing.
+49. As an Obsidian user, I want the model ID to be optional, so that I can use a sensible default unless I need a specific model.
+50. As an Obsidian user, I want support for Mistral, Google, Anthropic, and OpenAI, so that I can use a provider available to my account and budget.
+51. As an Obsidian user, I want the selected provider key stored in Obsidian plugin data for the MVP, so that setup is simple.
+52. As an Obsidian user, I want clear failure guidance when the selected provider key is missing, so that I know what to set up.
+53. As an Obsidian user, I want all generated knowledge to remain in my vault as Markdown, so that I retain ownership and can edit notes manually.
+54. As an Obsidian user, I want generated content to use consistent prompt rules across chat and summary generation, so that both workflows preserve traceability.
+55. As an Obsidian user, I want the plugin to avoid creating separate generated notes, so that source context remains consolidated in the Video note.
 
 ## Implementation Decisions
 
@@ -101,8 +103,9 @@ The MVP is desktop-only. It invokes local process APIs for `yt-dlp`, stores AI p
 - The shared prompt treats the Transcript as the primary evidence source, forbids invented timestamps, preserves nuance, and tells the model not to generate clickable video links.
 - Chat prompts allow external knowledge only when the user explicitly asks for it and require outside context to be labeled.
 - Generated content prompts prioritize focused reusable sections, allow few or no generated note sections when the Transcript is weak, and require structured output matching the schema.
-- AI model selection is centralized behind a provider-priority decision, choosing the first configured provider key in the supported provider order.
-- AI provider credentials and model IDs are configured in Obsidian plugin settings and stored in Obsidian plugin data as plain text for MVP usability.
+- AI model selection is centralized around one selected provider, one required API key, and one optional model ID override.
+- When the optional model ID is empty, model selection uses the selected provider's default model.
+- AI provider credentials are configured in Obsidian plugin settings and stored in Obsidian plugin data as plain text for MVP usability.
 - The chat module owns conversation state and streams assistant responses from the selected model.
 - The React view coordinates user actions and presentation state but delegates import, chat, storage, generation, model selection, and Transcript acquisition to plugin services.
 - Runtime logging is passed as a callback to long-running process and LLM operations so the UI can show progress without coupling lower-level modules to React.
@@ -121,7 +124,7 @@ The MVP is desktop-only. It invokes local process APIs for `yt-dlp`, stores AI p
 - Prompt composition should be tested by asserting durable constraints are present, such as Transcript-only evidence by default, exact timestamp requirements, external knowledge labeling for chat, and structured schema expectations for generated content.
 - Generated Video note content should be tested with a controllable model adapter or seam that verifies schema-constrained output, timestamp filtering, logging, and error propagation without calling real providers.
 - Chat behavior should be tested with a controllable model adapter or seam that verifies streamed output, persisted conversation messages, and Transcript-grounded prompt requirements without calling real providers.
-- AI model selection should be tested by providing settings with different configured providers and asserting the selected provider metadata or setup error.
+- AI model selection should be tested by providing settings with different selected providers, missing keys, empty model overrides, and explicit model overrides.
 - React view behavior should be covered with lightweight interaction tests where it protects user-facing flows: import success, import failure, runtime log clearing, Generate summary, chat send, save chat answer, and duplicate save prevention.
 - Existing prior art in the codebase already covers Transcript parsing, YouTube helpers, `yt-dlp` behavior, and vault storage with Vitest.
 - New tests should continue using dependency injection for external boundaries rather than mocking global process or network behavior broadly.
@@ -133,7 +136,7 @@ The MVP is desktop-only. It invokes local process APIs for `yt-dlp`, stores AI p
 - Downloading or storing video/audio files.
 - A cloud service or companion server for credential management.
 - OAuth-based AI provider authentication.
-- Encrypted storage for AI provider keys in the MVP.
+- Encrypted storage for the selected AI provider key in the MVP.
 - Full Transcript editing workflows.
 - Multi-video chat or cross-video synthesis.
 - Automatic LLM generation during import.
@@ -148,7 +151,7 @@ The MVP is desktop-only. It invokes local process APIs for `yt-dlp`, stores AI p
 ## Further Notes
 
 - This PRD uses the project glossary: Video note, generated note section, Transcript, and Timestamped claim.
-- The current architecture reflects the desktop plugin decision, settings-managed AI provider keys, explicit post-import LLM calls, and generated knowledge living inside the Video note.
+- The current architecture reflects the desktop plugin decision, settings-managed selected AI provider key, explicit post-import LLM calls, and generated knowledge living inside the Video note.
 - The highest-risk external dependencies are YouTube Transcript availability, `yt-dlp` behavior, local executable configuration, and AI provider availability.
 - The highest-risk product behavior is preserving trust: generated chat answers and generated note sections must remain grounded in the Transcript and traceable back to timestamps.
 - The prompt module is now an important product boundary because it keeps chat and Generate summary aligned on evidence, timestamp, and external-knowledge rules.

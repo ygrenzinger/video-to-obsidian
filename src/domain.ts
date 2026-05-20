@@ -2,14 +2,11 @@ import type { LanguageModel } from 'ai';
 
 export type SupportedProvider = 'mistral' | 'google' | 'anthropic' | 'openai';
 
-export type ProviderSettings = {
-  apiKey: string;
-  modelId: string;
-};
-
 export type VideoToObsidianSettings = {
   ytdlpPath: string;
-  providers: Record<SupportedProvider, ProviderSettings>;
+  aiProvider: SupportedProvider;
+  aiApiKey: string;
+  aiModelId: string;
   videoIndex: Record<string, string>;
 };
 
@@ -79,11 +76,8 @@ export type GeneratedVideoNoteContent = {
 
 export const DEFAULT_SETTINGS: VideoToObsidianSettings = {
   ytdlpPath: '',
-  providers: {
-    mistral: { apiKey: '', modelId: 'mistral-small-latest' },
-    google: { apiKey: '', modelId: 'gemini-2.0-flash' },
-    anthropic: { apiKey: '', modelId: 'claude-3-5-haiku-latest' },
-    openai: { apiKey: '', modelId: 'gpt-4o-mini' }
-  },
+  aiProvider: 'mistral',
+  aiApiKey: '',
+  aiModelId: '',
   videoIndex: {}
 };
