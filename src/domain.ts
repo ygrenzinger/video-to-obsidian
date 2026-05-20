@@ -9,9 +9,6 @@ export type ProviderSettings = {
 
 export type VideoToObsidianSettings = {
   ytdlpPath: string;
-  ytdlpCookiesFromBrowser: string;
-  atomicNotesFolder: string;
-  maxAtomicNotes: number;
   providers: Record<SupportedProvider, ProviderSettings>;
   videoIndex: Record<string, string>;
 };
@@ -68,18 +65,20 @@ export type TimestampedClaim = {
   timestamp: string;
 };
 
-export type AtomicNoteCandidate = {
+export type GeneratedVideoNoteSection = {
   title: string;
   summary: string;
   tags: string[];
   claims: TimestampedClaim[];
 };
 
+export type GeneratedVideoNoteContent = {
+  conciseSummary: string;
+  sections: GeneratedVideoNoteSection[];
+};
+
 export const DEFAULT_SETTINGS: VideoToObsidianSettings = {
   ytdlpPath: '',
-  ytdlpCookiesFromBrowser: '',
-  atomicNotesFolder: 'Atomic knowledge notes',
-  maxAtomicNotes: 8,
   providers: {
     mistral: { apiKey: '', modelId: 'mistral-small-latest' },
     google: { apiKey: '', modelId: 'gemini-2.0-flash' },

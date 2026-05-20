@@ -3,12 +3,11 @@ import { isAbsolute } from 'node:path';
 import { ChatService } from './chat-service';
 import {
   DEFAULT_SETTINGS,
-  type AtomicNoteCandidate,
   type ChatMessage,
   type VideoSession,
   type VideoToObsidianSettings
 } from './domain';
-import { extractAtomicNoteCandidates } from './knowledge-service';
+import { generateVideoNoteContent } from './knowledge-service';
 import { configuredProviderLabel, selectModel } from './model-selection';
 import { VideoToObsidianSettingTab } from './settings';
 import { isValidYouTubeUrl } from './youtube';
@@ -94,14 +93,19 @@ export default class VideoToObsidianPlugin extends Plugin {
     return new ChatService(session.metadata.url, session.transcript, selectModel(this.settings), onLog);
   }
 
-  async extractAtomicNotes(session: VideoSession, onLog?: RuntimeLog): Promise<AtomicNoteCandidate[]> {
-    return extractAtomicNoteCandidates(
+  async generateSummary(session: VideoSession, onLog?: RuntimeLog): Promise<void> {
+    const generatedContent = await generateVideoNoteContent(
       session.metadata,
       session.transcript,
       selectModel(this.settings),
-      this.settings.maxAtomicNotes,
       onLog
     );
+    await new VaultStorage(this.app.vault).updateGeneratedContent(
+      session.videoNotePath,
+      session.metadata,
+      generatedContent
+    );
+    new Notice('Video note summary generated.');
   }
 
   async saveChatHistory(session: VideoSession, messages: ChatMessage[]): Promise<void> {
@@ -109,15 +113,9 @@ export default class VideoToObsidianPlugin extends Plugin {
     new Notice('Chat history appended to the Video note.');
   }
 
-  async createAtomicNotes(session: VideoSession, candidates: AtomicNoteCandidate[]): Promise<string[]> {
-    const paths = await new VaultStorage(this.app.vault).createAtomicNotes(
-      this.settings,
-      session.metadata,
-      session.videoNotePath,
-      candidates
-    );
-    new Notice(`Created ${paths.length} Atomic knowledge note${paths.length === 1 ? '' : 's'}.`);
-    return paths;
+  async saveChatTurn(session: VideoSession, question: string, answer: string): Promise<void> {
+    await new VaultStorage(this.app.vault).appendChatTurn(session.videoNotePath, question, answer);
+    new Notice('Chat answer appended to the Video note.');
   }
 
   async loadSettings(): Promise<void> {
@@ -131,7 +129,6 @@ export default class VideoToObsidianPlugin extends Plugin {
 
   private createYtdlpService(onLog?: RuntimeLog): YtdlpService {
     return new YtdlpService(this.getYtdlpPath(), undefined, {
-      cookiesFromBrowser: this.settings.ytdlpCookiesFromBrowser,
       onLog
     });
   }
@@ -154,9 +151,6 @@ function mergeSettings(
 ): VideoToObsidianSettings {
   return {
     ytdlpPath: loaded.ytdlpPath ?? defaults.ytdlpPath,
-    ytdlpCookiesFromBrowser: loaded.ytdlpCookiesFromBrowser ?? defaults.ytdlpCookiesFromBrowser,
-    atomicNotesFolder: loaded.atomicNotesFolder ?? defaults.atomicNotesFolder,
-    maxAtomicNotes: loaded.maxAtomicNotes ?? defaults.maxAtomicNotes,
     providers: {
       ...structuredClone(defaults.providers),
       ...(loaded.providers ?? {})

@@ -1,7 +1,19 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { Vault } from 'obsidian';
+import { TFile, type Vault } from 'obsidian';
 import { DEFAULT_SETTINGS } from './domain';
 import { VaultStorage } from './vault-storage';
+
+const generatedContent = {
+  conciseSummary: 'This video explains how to preserve source context while creating useful notes.',
+  sections: [
+    {
+      title: 'Preserve source context',
+      summary: 'Notes are more useful when generated ideas remain connected to their evidence.',
+      tags: ['note-taking', 'traceability'],
+      claims: [{ text: 'The Transcript preserves a timestamped claim.', timestamp: '00:01' }]
+    }
+  ]
+};
 
 describe('VaultStorage', () => {
   it('creates a Video note at the vault root and indexes the video URL', async () => {
@@ -30,7 +42,35 @@ describe('VaultStorage', () => {
     expect(path).toBe('A Video- With Unsafe - Characters.md');
     expect(settings.videoIndex['https://youtu.be/dQw4w9WgXcQ']).toBe(path);
     expect(files.get(path)).toContain('videoUrl: "https://youtu.be/dQw4w9WgXcQ"');
+    expect(files.get(path)).toContain('## Summary\n\n_No generated summary yet._');
+    expect(files.get(path)).toContain('## Generated notes\n\n_No generated notes yet._');
     expect(files.get(path)).toContain('[00:01] A timestamped claim.');
+    expect(files.get(path)?.trimEnd().endsWith('```')).toBe(true);
+  });
+
+  it('updates generated content before the Transcript', async () => {
+    const path = 'Existing.md';
+    const file = Object.assign(Object.create(TFile.prototype) as TFile, { path });
+    let content = `# Existing\n\n## Summary\n\n_No generated summary yet._\n\n## Generated notes\n\n_No generated notes yet._\n\n## Chat history\n\n_No saved chat yet._\n\n## Transcript\n\n\`\`\`text\n[00:01] A timestamped claim.\n\`\`\`\n`;
+    const vault = {
+      getFileByPath: vi.fn((requestedPath: string) => (requestedPath === path ? file : null)),
+      process: vi.fn(async (_file: unknown, callback: (current: string) => string) => {
+        content = callback(content);
+      })
+    } as unknown as Vault;
+
+    await new VaultStorage(vault).updateGeneratedContent(
+      path,
+      { id: 'dQw4w9WgXcQ', title: 'Existing', url: 'https://youtu.be/dQw4w9WgXcQ' },
+      generatedContent
+    );
+
+    expect(content).toContain('## Summary\n\nThis video explains how to preserve source context');
+    expect(content).toContain('### Preserve source context');
+    expect(content).toContain('[00:01](https://youtu.be/dQw4w9WgXcQ?t=1)');
+    expect(content).toContain('## Chat history\n\n_No saved chat yet._');
+    expect(content.trimEnd().endsWith('```')).toBe(true);
+    expect(content.indexOf('### Preserve source context')).toBeLessThan(content.indexOf('## Transcript'));
   });
 
   it('reuses an existing Video note for the same video URL', async () => {
@@ -54,5 +94,48 @@ describe('VaultStorage', () => {
 
     expect(path).toBe(existingPath);
     expect(vault.create).not.toHaveBeenCalled();
+  });
+
+  it('appends chat history before the Transcript so the Transcript remains at the end', async () => {
+    const path = 'Existing.md';
+    const file = Object.assign(Object.create(TFile.prototype) as TFile, { path });
+    let content = `# Existing\n\n## Chat history\n\n_No saved chat yet._\n\n## Transcript\n\n\`\`\`text\n[00:01] A timestamped claim.\n\`\`\`\n`;
+    const vault = {
+      getFileByPath: vi.fn((requestedPath: string) => (requestedPath === path ? file : null)),
+      process: vi.fn(async (_file: unknown, callback: (current: string) => string) => {
+        content = callback(content);
+      })
+    } as unknown as Vault;
+
+    await new VaultStorage(vault).appendChatHistory(path, [
+      { id: '1', role: 'user', content: 'What matters?', createdAt: '2026-01-01T00:00:00.000Z' },
+      { id: '2', role: 'assistant', content: 'Traceability.', createdAt: '2026-01-01T00:00:01.000Z' }
+    ]);
+
+    expect(content).toContain('#### User\n\nWhat matters?');
+    expect(content).toContain('#### Assistant\n\nTraceability.');
+    expect(content).not.toContain('_No saved chat yet._');
+    expect(content.trimEnd().endsWith('```')).toBe(true);
+    expect(content.indexOf('### Chat')).toBeLessThan(content.indexOf('## Transcript'));
+  });
+
+  it('appends one saved chat turn before the Transcript', async () => {
+    const path = 'Existing.md';
+    const file = Object.assign(Object.create(TFile.prototype) as TFile, { path });
+    let content = `# Existing\n\n## Chat history\n\n_No saved chat yet._\n\n## Transcript\n\n\`\`\`text\n[00:01] A timestamped claim.\n\`\`\`\n`;
+    const vault = {
+      getFileByPath: vi.fn((requestedPath: string) => (requestedPath === path ? file : null)),
+      process: vi.fn(async (_file: unknown, callback: (current: string) => string) => {
+        content = callback(content);
+      })
+    } as unknown as Vault;
+
+    await new VaultStorage(vault).appendChatTurn(path, 'What matters?', 'Traceability.');
+
+    expect(content).toContain('#### Question\n\nWhat matters?');
+    expect(content).toContain('#### Answer\n\nTraceability.');
+    expect(content).not.toContain('_No saved chat yet._');
+    expect(content.trimEnd().endsWith('```')).toBe(true);
+    expect(content.indexOf('#### Answer')).toBeLessThan(content.indexOf('## Transcript'));
   });
 });

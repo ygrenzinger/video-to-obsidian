@@ -1,13 +1,13 @@
-import { normalizePath, TFile, TFolder, Vault } from 'obsidian';
+import { TFile, Vault } from 'obsidian';
 import type {
-  AtomicNoteCandidate,
   ChatMessage,
+  GeneratedVideoNoteContent,
   SubtitleLanguage,
   Transcript,
   VideoMetadata,
   VideoToObsidianSettings
 } from './domain';
-import { markdownLinkTarget, sanitizeFileName, yamlString } from './filename';
+import { sanitizeFileName, yamlString } from './filename';
 import { createYouTubeTimestampUrl } from './youtube';
 
 export class VaultStorage {
@@ -43,7 +43,7 @@ export class VaultStorage {
     const existingPath = settings.videoIndex[metadata.url] ?? settings.videoIndex[metadata.id];
     if (existingPath && this.vault.getFileByPath(existingPath)) return existingPath;
 
-    const path = await this.nextAvailableRootPath(sanitizeFileName(metadata.title));
+    const path = await this.nextAvailablePath(sanitizeFileName(metadata.title));
     await this.vault.create(path, this.videoNoteMarkdown(metadata, subtitle, transcript, providerLabel));
 
     settings.videoIndex[metadata.url] = path;
@@ -62,46 +62,42 @@ export class VaultStorage {
       })
       .join('\n\n');
 
+    await this.appendBeforeTranscript(file, `### Chat ${new Date().toLocaleString()}\n\n${markdown}`);
+  }
+
+  async appendChatTurn(videoNotePath: string, question: string, answer: string): Promise<void> {
+    const file = this.vault.getFileByPath(videoNotePath);
+    if (!(file instanceof TFile) || !question.trim() || !answer.trim()) return;
+
+    const markdown = `### Chat ${new Date().toLocaleString()}\n\n#### Question\n\n${question.trim()}\n\n#### Answer\n\n${answer.trim()}`;
+    await this.appendBeforeTranscript(file, markdown);
+  }
+
+  async updateGeneratedContent(videoNotePath: string, metadata: VideoMetadata, generatedContent: GeneratedVideoNoteContent): Promise<void> {
+    const file = this.vault.getFileByPath(videoNotePath);
+    if (!(file instanceof TFile)) return;
+
     await this.vault.process(file, (content) => {
-      return `${content.trimEnd()}\n\n### Chat ${new Date().toLocaleString()}\n\n${markdown}\n`;
+      const generatedMarkdown = this.generatedSectionsMarkdown(metadata, generatedContent);
+      const startMarker = '## Summary';
+      const endMarker = '\n## Chat history\n';
+      const startIndex = content.indexOf(startMarker);
+      const endIndex = content.indexOf(endMarker);
+
+      if (startIndex === -1 || endIndex === -1 || endIndex <= startIndex) {
+        const transcriptHeading = '\n## Transcript\n';
+        const transcriptIndex = content.indexOf(transcriptHeading);
+        const generatedBlock = this.generatedContentMarkdown(metadata, generatedContent);
+
+        if (transcriptIndex === -1) return `${content.trimEnd()}\n\n${generatedBlock}\n`;
+        return `${content.slice(0, transcriptIndex).trimEnd()}\n\n${generatedBlock}\n${content.slice(transcriptIndex)}`;
+      }
+
+      return `${content.slice(0, startIndex)}${generatedMarkdown}${content.slice(endIndex)}`;
     });
   }
 
-  async createAtomicNotes(
-    settings: VideoToObsidianSettings,
-    metadata: VideoMetadata,
-    videoNotePath: string,
-    candidates: AtomicNoteCandidate[]
-  ): Promise<string[]> {
-    const folder = normalizePath(settings.atomicNotesFolder);
-    await this.ensureFolder(folder);
-
-    const createdPaths: string[] = [];
-    for (const candidate of candidates) {
-      const path = await this.nextAvailablePath(folder, sanitizeFileName(candidate.title));
-      await this.vault.create(path, this.atomicNoteMarkdown(metadata, videoNotePath, candidate));
-      createdPaths.push(path);
-    }
-
-    return createdPaths;
-  }
-
-  private async ensureFolder(path: string): Promise<void> {
-    if (!path || path === '/') return;
-
-    const parts = path.split('/').filter(Boolean);
-    let current = '';
-
-    for (const part of parts) {
-      current = current ? `${current}/${part}` : part;
-      const existing = this.vault.getAbstractFileByPath(current);
-      if (existing instanceof TFolder) continue;
-      if (existing) throw new Error(`${current} exists and is not a folder.`);
-      await this.vault.createFolder(current);
-    }
-  }
-
-  private async nextAvailableRootPath(basename: string): Promise<string> {
+  private async nextAvailablePath(basename: string): Promise<string> {
     let candidate = `${basename}.md`;
     let index = 2;
 
@@ -113,16 +109,18 @@ export class VaultStorage {
     return candidate;
   }
 
-  private async nextAvailablePath(folder: string, basename: string): Promise<string> {
-    let candidate = normalizePath(`${folder}/${basename}.md`);
-    let index = 2;
+  private async appendBeforeTranscript(file: TFile, markdown: string): Promise<void> {
+    await this.vault.process(file, (content) => {
+      const transcriptHeading = '\n## Transcript\n';
+      const contentWithoutPlaceholder = content.replace('\n_No saved chat yet._\n', '\n');
+      const transcriptIndex = contentWithoutPlaceholder.indexOf(transcriptHeading);
 
-    while (this.vault.getAbstractFileByPath(candidate)) {
-      candidate = normalizePath(`${folder}/${basename} ${index}.md`);
-      index += 1;
-    }
+      if (transcriptIndex === -1) {
+        return `${contentWithoutPlaceholder.trimEnd()}\n\n${markdown}\n`;
+      }
 
-    return candidate;
+      return `${contentWithoutPlaceholder.slice(0, transcriptIndex).trimEnd()}\n\n${markdown}\n${contentWithoutPlaceholder.slice(transcriptIndex)}`;
+    });
   }
 
   private videoNoteMarkdown(
@@ -149,48 +147,55 @@ createdAt: ${yamlString(new Date().toISOString())}
 
 _No generated summary yet._
 
+## Generated notes
+
+_No generated notes yet._
+
+## Chat history
+
+_No saved chat yet._
+
 ## Transcript
 
 \`\`\`text
 ${transcript.markdown}
 \`\`\`
-
-## Chat history
 `;
   }
 
-  private atomicNoteMarkdown(
+  private generatedContentMarkdown(
     metadata: VideoMetadata,
-    videoNotePath: string,
-    candidate: AtomicNoteCandidate
+    generatedContent: GeneratedVideoNoteContent
   ): string {
-    const videoNoteLink = `[[${markdownLinkTarget(videoNotePath)}]]`;
-    const tags = ['video-to-obsidian', 'atomic-knowledge', ...candidate.tags]
-      .map((tag) => tag.replace(/^#/, '').trim())
-      .filter(Boolean);
+    return `${this.generatedSectionsMarkdown(metadata, generatedContent)}\n\n## Chat history\n\n_No saved chat yet._`;
+  }
 
-    const claims = candidate.claims
-      .map((claim) => {
+  private generatedSectionsMarkdown(
+    metadata: VideoMetadata,
+    generatedContent: GeneratedVideoNoteContent
+  ): string {
+    return `## Summary\n\n${generatedContent.conciseSummary}\n\n## Generated notes\n\n${this.generatedNotesMarkdown(metadata, generatedContent)}`;
+  }
+
+  private generatedNotesMarkdown(
+    metadata: VideoMetadata,
+    generatedContent: GeneratedVideoNoteContent
+  ): string {
+    if (generatedContent.sections.length === 0) return '_No generated notes._';
+
+    return generatedContent.sections.map((section) => {
+      const tags = section.tags
+        .map((tag) => tag.replace(/^#/, '').trim())
+        .filter(Boolean)
+        .map((tag) => `#${tag}`)
+        .join(' ');
+      const claims = section.claims.map((claim) => {
         const timestampUrl = createYouTubeTimestampUrl(metadata.url, claim.timestamp);
         const timestamp = timestampUrl ? `[${claim.timestamp}](${timestampUrl})` : claim.timestamp;
-        return `- ${claim.text} (${timestamp}) from ${videoNoteLink}`;
-      })
-      .join('\n');
+        return `- ${claim.text} (${timestamp})`;
+      });
 
-    return `---
-sourceVideo: ${yamlString(videoNoteLink)}
-sourceUrl: ${yamlString(metadata.url)}
-createdAt: ${yamlString(new Date().toISOString())}
-tags: [${tags.map(yamlString).join(', ')}]
----
-
-# ${candidate.title}
-
-${candidate.summary}
-
-## Timestamped claims
-
-${claims || '- No timestamped claims were extracted.'}
-`;
+      return `### ${section.title}\n\n${section.summary}${tags ? `\n\n${tags}` : ''}${claims.length > 0 ? `\n\n#### Timestamped claims\n\n${claims.join('\n')}` : ''}`;
+    }).join('\n\n');
   }
 }

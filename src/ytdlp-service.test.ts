@@ -85,43 +85,6 @@ Bonjour.
     expect(fetchSubtitle).toHaveBeenCalledWith('https://example.test/fr-orig.vtt');
   });
 
-  it('passes browser cookies to yt-dlp when configured', async () => {
-    const runner: CommandRunner = vi.fn().mockResolvedValue({
-      stdout: JSON.stringify({
-        subtitles: {
-          en: [{ ext: 'vtt', url: 'https://example.test/en.vtt', name: 'English' }]
-        }
-      }),
-      stderr: ''
-    });
-    const fetchSubtitle = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      statusText: 'OK',
-      text: async () => `WEBVTT
-
-00:00:01.000 --> 00:00:02.000
-Claim.
-`
-    });
-    const service = new YtdlpService('yt-dlp', runner, {
-      cookiesFromBrowser: 'chrome',
-      fetchSubtitle,
-      processDelayMs: 0
-    });
-
-    await service.downloadBestTranscript('https://youtu.be/dQw4w9WgXcQ');
-
-    expect(runner).toHaveBeenCalledWith('yt-dlp', [
-      '--cookies-from-browser',
-      'chrome',
-      '--dump-json',
-      '--skip-download',
-      '--no-playlist',
-      'https://youtu.be/dQw4w9WgXcQ'
-    ]);
-  });
-
   it('logs each yt-dlp process command before running it', async () => {
     const onLog = vi.fn();
     const runner: CommandRunner = vi.fn().mockResolvedValue({ stdout: '2026.03.17\n', stderr: '' });
@@ -155,7 +118,7 @@ Claim.
     const service = new YtdlpService('yt-dlp', runner, { processDelayMs: 0 });
 
     await expect(service.downloadBestTranscript('https://youtu.be/dQw4w9WgXcQ')).rejects.toThrow(
-      'set "YouTube cookies from browser"'
+      'Browser-cookie authentication is not configurable'
     );
   });
 

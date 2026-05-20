@@ -1,5 +1,6 @@
 import { streamText } from 'ai';
 import type { ChatMessage, ModelConfiguration, Transcript } from './domain';
+import { buildTranscriptSystemPrompt, CHAT_TASK_PROMPT } from './prompts';
 import { formatLogError, formatTokenUsage, type RuntimeLog } from './runtime-log';
 
 export class ChatService {
@@ -71,12 +72,7 @@ export class ChatService {
   }
 
   private systemPrompt(): string {
-    return `You are an AI assistant specialized in analyzing one video transcript.
-
-Use only the Transcript as evidence unless the user explicitly asks for external knowledge.
-When making claims about the video, cite exact timestamps that appear in the Transcript in (MM:SS) or (HH:MM:SS) format.
-Do not invent timestamps. If the Transcript does not support an answer, say so.
-Do not generate clickable YouTube links; the Obsidian plugin handles links.
+    return `${buildTranscriptSystemPrompt(CHAT_TASK_PROMPT)}
 
 Video URL: ${this.videoUrl}
 

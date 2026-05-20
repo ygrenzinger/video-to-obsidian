@@ -23,7 +23,6 @@ export type SubtitleFetcher = (url: string) => Promise<{
 }>;
 
 export type YtdlpOptions = {
-  cookiesFromBrowser?: string;
   fetchSubtitle?: SubtitleFetcher;
   onLog?: (message: string) => void;
   processDelayMs?: number;
@@ -66,7 +65,7 @@ export class YtdlpService {
   ) {}
 
   async getVersion(): Promise<string> {
-    const result = await this.exec(['--version'], false);
+    const result = await this.exec(['--version']);
     return result.stdout.trim();
   }
 
@@ -118,20 +117,14 @@ export class YtdlpService {
     return transcript;
   }
 
-  private async exec(args: string[], includeAuthentication = true): Promise<ExecResult> {
-    const ytdlpArgs = includeAuthentication ? [...this.authenticationArgs(), ...args] : args;
+  private async exec(args: string[]): Promise<ExecResult> {
     try {
       await waitForYtdlpCallSlot(this.options.processDelayMs ?? YTDLP_CALL_DELAY_MS);
-      this.log(formatCommand(this.executablePath, ytdlpArgs));
-      return await this.runner(this.executablePath, ytdlpArgs);
+      this.log(formatCommand(this.executablePath, args));
+      return await this.runner(this.executablePath, args);
     } catch (error) {
       throw normalizeExecutionError(error, this.executablePath);
     }
-  }
-
-  private authenticationArgs(): string[] {
-    const browser = this.options.cookiesFromBrowser?.trim();
-    return browser ? ['--cookies-from-browser', browser] : [];
   }
 
   private log(message: string): void {
@@ -227,7 +220,7 @@ function normalizeExecutionError(error: unknown, configuredPath: string): Error 
 
   if (isYouTubeAuthenticationError(error)) {
     return new Error(
-      'YouTube asked yt-dlp to authenticate this request. In plugin settings, set "YouTube cookies from browser" to the browser where you are signed in to YouTube, such as chrome, safari, firefox, or edge. Then try again.'
+      'YouTube asked yt-dlp to authenticate this request. Browser-cookie authentication is not configurable in the plugin right now. Try another video or retry later.'
     );
   }
 

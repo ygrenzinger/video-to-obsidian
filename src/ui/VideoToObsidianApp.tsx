@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type VideoToObsidianPlugin from '../main';
-import type { AtomicNoteCandidate, ChatMessage, VideoSession } from '../domain';
+import type { ChatMessage, VideoSession } from '../domain';
 import { ChatService } from '../chat-service';
 
 type Props = {
@@ -14,10 +14,10 @@ export function VideoToObsidianApp({ plugin }: Props) {
   const [session, setSession] = useState<VideoSession | null>(null);
   const [chatService, setChatService] = useState<ChatService | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [savedAnswerIds, setSavedAnswerIds] = useState<Set<string>>(new Set());
   const [chatInput, setChatInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
-  const [candidates, setCandidates] = useState<AtomicNoteCandidate[]>([]);
-  const [selectedCandidates, setSelectedCandidates] = useState<Set<number>>(new Set());
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [runtimeLogs, setRuntimeLogs] = useState<string[]>([]);
 
   function appendRuntimeLog(message: string) {
@@ -44,9 +44,17 @@ export function VideoToObsidianApp({ plugin }: Props) {
     setSession(importedSession);
     setChatService(plugin.createChatService(importedSession, appendRuntimeLog));
     setMessages([]);
-    setCandidates([]);
-    setSelectedCandidates(new Set());
+    setSavedAnswerIds(new Set());
     setStatus(`Ready: ${importedSession.metadata.title}`);
+  }
+
+  async function generateSummary() {
+    if (!session) return;
+    setIsGeneratingSummary(true);
+    setStatus('Generating Video note summary...');
+    const generated = await run(() => plugin.generateSummary(session, appendRuntimeLog));
+    setIsGeneratingSummary(false);
+    if (generated !== null) setStatus('Video note summary generated.');
   }
 
   async function sendChatMessage() {
@@ -95,44 +103,16 @@ export function VideoToObsidianApp({ plugin }: Props) {
     setIsStreaming(false);
   }
 
-  async function saveChatHistory() {
-    if (!session) return;
-    setStatus('Saving chat history...');
-    await run(() => plugin.saveChatHistory(session, messages));
-    setStatus('Chat history saved.');
+  async function saveChatTurn(question: ChatMessage, answer: ChatMessage) {
+    if (!session || !answer.content.trim()) return;
+    setStatus('Saving chat answer...');
+    const saved = await run(() => plugin.saveChatTurn(session, question.content, answer.content));
+    if (saved === null) return;
+    setSavedAnswerIds((current) => new Set(current).add(answer.id));
+    setStatus('Chat answer saved.');
   }
 
-  async function extractKnowledge() {
-    if (!session) return;
-    setStatus('Extracting Atomic knowledge note candidates...');
-    const extracted = await run(() => plugin.extractAtomicNotes(session, appendRuntimeLog));
-    if (!extracted) return;
-    setCandidates(extracted);
-    setSelectedCandidates(new Set(extracted.map((_, index) => index)));
-    setStatus(`Extracted ${extracted.length} candidate${extracted.length === 1 ? '' : 's'} for review.`);
-  }
-
-  async function createSelectedNotes() {
-    if (!session) return;
-    const selected = candidates.filter((_, index) => selectedCandidates.has(index));
-    if (selected.length === 0) {
-      setError('Select at least one Atomic knowledge note candidate.');
-      return;
-    }
-
-    setStatus('Creating Atomic knowledge notes...');
-    await run(() => plugin.createAtomicNotes(session, selected));
-    setStatus('Atomic knowledge notes created.');
-  }
-
-  function toggleCandidate(index: number) {
-    setSelectedCandidates((current) => {
-      const next = new Set(current);
-      if (next.has(index)) next.delete(index);
-      else next.add(index);
-      return next;
-    });
-  }
+  const chatTurns = toChatTurns(messages);
 
   return (
     <>
@@ -166,7 +146,10 @@ export function VideoToObsidianApp({ plugin }: Props) {
       {session ? (
         <section className="vto-panel vto-column">
           <h3>{session.metadata.title}</h3>
-          <div className="vto-muted">Video note: {session.videoNotePath}</div>
+          <div className="vto-row vto-row-between">
+            <div className="vto-muted">Video note: {session.videoNotePath}</div>
+            <button disabled={isGeneratingSummary} onClick={generateSummary}>Generate summary</button>
+          </div>
           <details>
             <summary>Transcript preview</summary>
             <pre className="vto-transcript">{session.transcript.markdown}</pre>
@@ -178,12 +161,29 @@ export function VideoToObsidianApp({ plugin }: Props) {
         <section className="vto-panel vto-column">
           <h3>Chat with Transcript</h3>
           <div className="vto-chat">
-            {messages.length === 0 ? <div className="vto-muted">Ask a question about the video.</div> : null}
-            {messages.map((message) => (
-              <div className="vto-message" key={message.id}>
-                <div className="vto-message-role">{message.role}</div>
-                <div>{message.content}</div>
-              </div>
+            {chatTurns.length === 0 ? <div className="vto-muted">Ask a question about the video.</div> : null}
+            {chatTurns.map((turn) => (
+              <article className="vto-chat-turn" key={turn.answer.id}>
+                <div className="vto-chat-block">
+                  <div className="vto-message-role">Question</div>
+                  <div className="vto-message-content">{turn.question.content}</div>
+                </div>
+                <div className="vto-chat-block">
+                  <div className="vto-message-role">Answer</div>
+                  <div className="vto-message-content">{turn.answer.content || 'Generating...'}</div>
+                </div>
+                <div className="vto-row vto-row-between">
+                  <div className="vto-muted">
+                    {savedAnswerIds.has(turn.answer.id) ? 'Saved to Video note.' : null}
+                  </div>
+                  <button
+                    disabled={!turn.answer.streamingComplete || savedAnswerIds.has(turn.answer.id)}
+                    onClick={() => saveChatTurn(turn.question, turn.answer)}
+                  >
+                    {savedAnswerIds.has(turn.answer.id) ? 'Saved' : 'Save'}
+                  </button>
+                </div>
+              </article>
             ))}
           </div>
           <div className="vto-row">
@@ -198,40 +198,25 @@ export function VideoToObsidianApp({ plugin }: Props) {
               }}
             />
             <button disabled={isStreaming} onClick={sendChatMessage}>Send</button>
-            <button disabled={messages.length === 0} onClick={saveChatHistory}>Save chat</button>
           </div>
         </section>
       ) : null}
 
-      {session ? (
-        <section className="vto-panel vto-column">
-          <h3>Create Atomic knowledge notes</h3>
-          <div className="vto-row">
-            <button onClick={extractKnowledge}>Extract for review</button>
-            <button disabled={candidates.length === 0} onClick={createSelectedNotes}>Create selected notes</button>
-          </div>
-          {candidates.map((candidate, index) => (
-            <article className="vto-note-candidate" key={`${candidate.title}-${index}`}>
-              <label className="vto-row">
-                <input
-                  type="checkbox"
-                  checked={selectedCandidates.has(index)}
-                  onChange={() => toggleCandidate(index)}
-                />
-                <strong>{candidate.title}</strong>
-              </label>
-              <p>{candidate.summary}</p>
-              <ul>
-                {candidate.claims.map((claim, claimIndex) => (
-                  <li key={`${claim.timestamp}-${claimIndex}`}>
-                    {claim.text} ({claim.timestamp})
-                  </li>
-                ))}
-              </ul>
-            </article>
-          ))}
-        </section>
-      ) : null}
     </>
   );
+}
+
+function toChatTurns(messages: ChatMessage[]): Array<{ question: ChatMessage; answer: ChatMessage }> {
+  const turns: Array<{ question: ChatMessage; answer: ChatMessage }> = [];
+
+  for (let index = 0; index < messages.length - 1; index += 1) {
+    const question = messages[index];
+    const answer = messages[index + 1];
+    if (question.role === 'user' && answer.role === 'assistant') {
+      turns.push({ question, answer });
+      index += 1;
+    }
+  }
+
+  return turns;
 }
