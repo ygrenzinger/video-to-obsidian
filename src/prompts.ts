@@ -11,15 +11,14 @@ Core rules:
 - If the Transcript does not support an answer or claim, say so clearly.
 - Preserve nuance, uncertainty, trade-offs, and constraints.
 - Do not hallucinate tools, examples, conclusions, speaker intent, or missing context.
-- Avoid hype, filler, and generic advice.
-- Do not generate clickable video links. The plugin handles links.`;
+- Avoid hype, filler, and generic advice.`;
 
 export const CHAT_TASK_PROMPT = `Task:
 Answer the user's question about the video using the Transcript as evidence.
 
 Response rules:
 - Be direct and useful.
-- If the answer is supported by the Transcript, explain it and include relevant timestamps.
+- If the answer is supported by the Transcript, explain it and include relevant timestamps. The plugin will convert timestamps into YouTube links.
 - If the question asks for interpretation, clearly separate Transcript-supported facts from your interpretation.
 - If the user asks for external knowledge, you may use it, but clearly label what comes from outside the Transcript.
 - If the Transcript does not contain enough evidence, say what is missing instead of guessing.`;

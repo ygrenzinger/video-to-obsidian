@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { ChatMessage, ModelConfiguration, Transcript } from './domain';
 import { buildTranscriptSystemPrompt, CHAT_TASK_PROMPT, GENERATE_CHAT_ANSWER_TITLE_TASK_PROMPT } from './prompts';
 import { formatLogError, formatTokenUsage, type RuntimeLog } from './runtime-log';
+import { createYouTubeTimestampUrl } from './youtube';
 
 const chatAnswerTitleSchema = z.object({
   title: z.string().min(1).describe('Concise Obsidian section title for the saved chat answer.')
@@ -46,15 +47,28 @@ export class ChatService {
       });
 
       let assistantContent = '';
+      let linkifyBuffer = '';
       let hasLoggedStreamStart = false;
       for await (const textPart of result.textStream) {
         if (!hasLoggedStreamStart) {
           this.log('LLM chat response streaming.');
           hasLoggedStreamStart = true;
         }
-        assistantContent += textPart;
-        yield textPart;
+        linkifyBuffer += textPart;
+
+        const processedLength = Math.max(0, linkifyBuffer.length - 32);
+        const processed = linkifyTranscriptTimestamps(this.videoUrl, linkifyBuffer.slice(0, processedLength));
+        linkifyBuffer = linkifyBuffer.slice(processedLength);
+
+        if (processed) {
+          assistantContent += processed;
+          yield processed;
+        }
       }
+
+      const finalProcessed = linkifyTranscriptTimestamps(this.videoUrl, linkifyBuffer);
+      assistantContent += finalProcessed;
+      if (finalProcessed) yield finalProcessed;
 
       const [finishReason, totalUsage] = await Promise.all([result.finishReason, result.totalUsage]);
       this.log(`LLM chat response finished (${finishReason}; ${formatTokenUsage(totalUsage)}).`);
@@ -85,6 +99,13 @@ Video URL: ${this.videoUrl}
 ${this.transcript.markdown}
 </Transcript>`;
   }
+}
+
+export function linkifyTranscriptTimestamps(videoUrl: string, text: string): string {
+  return text.replace(/\[((?:\d{1,2}:)?\d{1,2}:\d{2})\]/g, (match, timestamp: string) => {
+    const timestampUrl = createYouTubeTimestampUrl(videoUrl, timestamp);
+    return timestampUrl ? `[${timestamp}](${timestampUrl})` : match;
+  });
 }
 
 export async function generateChatAnswerTitle(
