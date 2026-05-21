@@ -24,41 +24,27 @@ Response rules:
 - If the user asks for external knowledge, you may use it, but clearly label what comes from outside the Transcript.
 - If the Transcript does not contain enough evidence, say what is missing instead of guessing.`;
 
-export const GENERATE_VIDEO_NOTE_CONTENT_TASK_PROMPT = `Task:
+export const GENERATE_VIDEO_TOPIC_SUMMARIES_TASK_PROMPT = `Task:
 Create generated content for one Obsidian Video note from the Transcript.
 
-The Video note already contains video metadata and the full Transcript. Generate:
-- A concise high-level summary.
-- Focused generated note sections for reusable ideas from the video.
+The Video note already contains video metadata and the full Transcript.
 
-Summary rules:
-- Write 3-6 concise sentences.
-- Cover the video's main points accurately.
-- Do not include unsupported claims.
+Generate:
+- A clear overall summary of the video.
+- One section for each main topic addressed in the video.
 
-Generated note section rules:
-- Each section should contain one focused idea, pattern, warning, trade-off, example, or lesson.
-- Prefer sections that are reusable outside the video.
-- Skip weak, vague, obvious, motivational, or unsupported ideas.
-- Include timestamped claims when possible.
-- If a timestamped claim cannot be grounded in an exact Transcript timestamp, omit that claim.
-- It is acceptable to return few or no generated note sections if the Transcript does not support strong ones.
+Overall summary rules:
+- Write 3-6 sentences.
+- Cover the video's main purpose, progression, and conclusions.
+- Use only information supported by the Transcript.
 
-Selection criteria:
-Choose sections that capture one or more of the following:
-- A key technical concept
-- A reusable engineering pattern
-- A practical recommendation
-- A mistake or anti-pattern to avoid
-- A decision-making principle
-- A trade-off
-- A system design lesson
-- A concrete demo or example that illustrates a broader idea
-- A prediction or future-facing concept, only if clearly supported
-
-Quality bar:
-- A section is good if it can stand alone outside the video and still be useful.
-- A section is bad if it only says that the speaker talked about a topic without extracting a reusable idea.
+Topic section rules:
+- Create a section for every substantial topic the video addresses.
+- Use the topic as the section title.
+- Write a detailed summary of what the video says about that topic, including important details, examples, caveats, and conclusions.
+- Include timestamped claims when possible to show where the topic is supported in the Transcript.
+- Only use exact timestamps copied from the Transcript.
+- Skip only topics that are too brief or unclear to summarize accurately.
 
 Return structured data matching the requested schema.`;
 

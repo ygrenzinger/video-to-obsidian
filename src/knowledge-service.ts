@@ -1,7 +1,7 @@
 import { generateObject } from 'ai';
 import { z } from 'zod';
 import type { GeneratedVideoNoteContent, ModelConfiguration, Transcript, VideoMetadata } from './domain';
-import { buildTranscriptSystemPrompt, GENERATE_VIDEO_NOTE_CONTENT_TASK_PROMPT } from './prompts';
+import { buildTranscriptSystemPrompt, GENERATE_VIDEO_TOPIC_SUMMARIES_TASK_PROMPT } from './prompts';
 import { formatLogError, formatTokenUsage, type RuntimeLog } from './runtime-log';
 
 const sectionSchema = z.object({
@@ -21,7 +21,7 @@ const videoNoteContentSchema = z.object({
   sections: z.array(sectionSchema).describe('Useful, reusable notes extracted from the Transcript.')
 });
 
-const SYSTEM_PROMPT = buildTranscriptSystemPrompt(GENERATE_VIDEO_NOTE_CONTENT_TASK_PROMPT);
+const SYSTEM_PROMPT = buildTranscriptSystemPrompt(GENERATE_VIDEO_TOPIC_SUMMARIES_TASK_PROMPT);
 
 export async function generateVideoNoteContent(
   metadata: VideoMetadata,
