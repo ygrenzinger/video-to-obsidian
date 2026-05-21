@@ -106,7 +106,7 @@ export function VideoToObsidianApp({ plugin }: Props) {
   async function saveChatTurn(question: ChatMessage, answer: ChatMessage) {
     if (!session || !answer.content.trim()) return;
     setStatus('Saving chat answer...');
-    const saved = await run(() => plugin.saveChatTurn(session, question.content, answer.content));
+    const saved = await run(() => plugin.saveChatTurn(session, question.content, answer.content, appendRuntimeLog));
     if (saved === null) return;
     setSavedAnswerIds((current) => new Set(current).add(answer.id));
     setStatus('Chat answer saved.');

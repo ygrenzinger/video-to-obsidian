@@ -24,6 +24,16 @@ Response rules:
 - If the user asks for external knowledge, you may use it, but clearly label what comes from outside the Transcript.
 - If the Transcript does not contain enough evidence, say what is missing instead of guessing.`;
 
+export const GENERATE_CHAT_ANSWER_TITLE_TASK_PROMPT = `Task:
+Create a concise Obsidian section title for a saved chat answer.
+
+Title rules:
+- Base the title on the user's question.
+- Preserve important domain terms.
+- Write 3-8 words when possible.
+- Do not answer the question.
+- Do not include Markdown formatting, quotes, or trailing punctuation.`;
+
 export const GENERATE_VIDEO_TOPIC_SUMMARIES_TASK_PROMPT = `Task:
 Create generated content for one Obsidian Video note from the Transcript.
 

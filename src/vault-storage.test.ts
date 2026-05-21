@@ -184,7 +184,7 @@ describe('VaultStorage', () => {
     expect(content.indexOf('### Chat')).toBeLessThan(content.indexOf('## Transcript'));
   });
 
-  it('appends one saved chat turn before the Transcript', async () => {
+  it('appends one titled saved chat answer before the Transcript', async () => {
     const path = 'Existing.md';
     const file = Object.assign(Object.create(TFile.prototype) as TFile, { path });
     let content = `# Existing\n\n## Chat history\n\n_No saved chat yet._\n\n## Transcript\n\n\`\`\`text\n[00:01] A timestamped claim.\n\`\`\`\n`;
@@ -195,12 +195,15 @@ describe('VaultStorage', () => {
       })
     } as unknown as Vault;
 
-    await new VaultStorage(vault).appendChatTurn(path, 'What matters?', 'Traceability.');
+    await new VaultStorage(vault).appendChatTurn(path, 'Why Traceability Matters', 'Traceability.');
 
-    expect(content).toContain('#### Question\n\nWhat matters?');
-    expect(content).toContain('#### Answer\n\nTraceability.');
+    expect(content).toContain('### Why Traceability Matters\n\nTraceability.');
+    expect(content).not.toContain('### Chat');
+    expect(content).not.toContain('#### Question');
+    expect(content).not.toContain('#### Answer');
+    expect(content).not.toContain('What matters?');
     expect(content).not.toContain('_No saved chat yet._');
     expect(content.trimEnd().endsWith('```')).toBe(true);
-    expect(content.indexOf('#### Answer')).toBeLessThan(content.indexOf('## Transcript'));
+    expect(content.indexOf('### Why Traceability Matters')).toBeLessThan(content.indexOf('## Transcript'));
   });
 });

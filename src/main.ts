@@ -1,6 +1,6 @@
 import { Notice, Plugin, WorkspaceLeaf } from 'obsidian';
 import { isAbsolute } from 'node:path';
-import { ChatService } from './chat-service';
+import { ChatService, generateChatAnswerTitle } from './chat-service';
 import {
   DEFAULT_SETTINGS,
   type ChatMessage,
@@ -114,8 +114,9 @@ export default class VideoToObsidianPlugin extends Plugin {
     new Notice('Chat history appended to the Video note.');
   }
 
-  async saveChatTurn(session: VideoSession, question: string, answer: string): Promise<void> {
-    await new VaultStorage(this.app.vault).appendChatTurn(session.videoNotePath, question, answer);
+  async saveChatTurn(session: VideoSession, question: string, answer: string, onLog?: RuntimeLog): Promise<void> {
+    const title = await generateChatAnswerTitle(question, answer, selectModel(this.settings), onLog);
+    await new VaultStorage(this.app.vault).appendChatTurn(session.videoNotePath, title, answer);
     new Notice('Chat answer appended to the Video note.');
   }
 

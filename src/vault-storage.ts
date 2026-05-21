@@ -68,11 +68,11 @@ export class VaultStorage {
     await this.appendBeforeTranscript(file, `### Chat ${new Date().toLocaleString()}\n\n${markdown}`);
   }
 
-  async appendChatTurn(videoNotePath: string, question: string, answer: string): Promise<void> {
+  async appendChatTurn(videoNotePath: string, title: string, answer: string): Promise<void> {
     const file = this.vault.getFileByPath(videoNotePath);
-    if (!(file instanceof TFile) || !question.trim() || !answer.trim()) return;
+    if (!(file instanceof TFile) || !title.trim() || !answer.trim()) return;
 
-    const markdown = `### Chat ${new Date().toLocaleString()}\n\n#### Question\n\n${question.trim()}\n\n#### Answer\n\n${answer.trim()}`;
+    const markdown = `### ${title.trim()}\n\n${answer.trim()}`;
     await this.appendBeforeTranscript(file, markdown);
   }
 
