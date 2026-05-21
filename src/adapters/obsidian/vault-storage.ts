@@ -4,14 +4,40 @@ import type {
   GeneratedVideoNoteContent,
   SubtitleLanguage,
   Transcript,
+  TranscriptSource,
   VideoMetadata,
   VideoToObsidianSettings
-} from './domain';
-import { sanitizeFileName, yamlString } from './filename';
-import { createYouTubeTimestampUrl } from './youtube';
+} from '../../domain';
+import type { CreateVideoNoteInput } from '../../application/import-video';
+import {
+  extractStoredTranscript,
+  generatedContentMarkdown,
+  generatedFrontmatterTags,
+  generatedSectionsMarkdown,
+  safeVideoNoteBasename,
+  videoNoteMarkdown
+} from '../../markdown/video-note-markdown';
 
 export class VaultStorage {
   constructor(private readonly vault: Vault) {}
+
+  findReusableVideoNote(settings: VideoToObsidianSettings, metadata: VideoMetadata, inputUrl: string): string | null {
+    return this.getExistingVideoNotePath(settings, metadata, inputUrl);
+  }
+
+  async readTranscript(videoNotePath: string): Promise<Transcript | null> {
+    return this.readTranscriptFromVideoNote(videoNotePath);
+  }
+
+  async createVideoNote(input: CreateVideoNoteInput): Promise<string> {
+    return this.createOrReuseVideoNote(
+      input.settings,
+      input.metadata,
+      input.transcriptSource,
+      input.transcript,
+      input.providerLabel
+    );
+  }
 
   getExistingVideoNotePath(settings: VideoToObsidianSettings, metadata: VideoMetadata, inputUrl: string): string | null {
     const path = settings.videoIndex[metadata.url] ?? settings.videoIndex[metadata.id] ?? settings.videoIndex[inputUrl];
@@ -23,20 +49,13 @@ export class VaultStorage {
     if (!(file instanceof TFile)) return null;
 
     const content = await this.vault.cachedRead(file);
-    const match = content.match(/## Transcript\s+```text\n([\s\S]*?)\n```/);
-    if (!match) return null;
-
-    return {
-      cues: [],
-      rawSrt: '',
-      markdown: match[1].trim()
-    };
+    return extractStoredTranscript(content);
   }
 
   async createOrReuseVideoNote(
     settings: VideoToObsidianSettings,
     metadata: VideoMetadata,
-    subtitle: SubtitleLanguage,
+    subtitle: SubtitleLanguage | TranscriptSource,
     transcript: Transcript,
     providerLabel: string
   ): Promise<string> {
@@ -46,8 +65,8 @@ export class VaultStorage {
     const folder = normalizePath(settings.videoNotesFolder.trim() || 'Video notes');
     await this.ensureFolder(folder);
 
-    const path = await this.nextAvailablePath(folder, sanitizeFileName(metadata.title));
-    await this.vault.create(path, this.videoNoteMarkdown(metadata, subtitle, transcript, providerLabel));
+    const path = await this.nextAvailablePath(folder, safeVideoNoteBasename(metadata.title));
+    await this.vault.create(path, videoNoteMarkdown({ metadata, subtitle, transcript, providerLabel }));
 
     settings.videoIndex[metadata.url] = path;
     settings.videoIndex[metadata.id] = path;
@@ -82,7 +101,7 @@ export class VaultStorage {
 
     await this.vault.process(file, (content) => {
       const contentWithTags = this.updateFrontmatterTags(content, generatedContent.tags);
-      const generatedMarkdown = this.generatedSectionsMarkdown(metadata, generatedContent);
+      const generatedMarkdown = generatedSectionsMarkdown(metadata, generatedContent);
       const startMarker = '## Summary';
       const endMarker = '\n## Chat history\n';
       const startIndex = contentWithTags.indexOf(startMarker);
@@ -91,7 +110,7 @@ export class VaultStorage {
       if (startIndex === -1 || endIndex === -1 || endIndex <= startIndex) {
         const transcriptHeading = '\n## Transcript\n';
         const transcriptIndex = contentWithTags.indexOf(transcriptHeading);
-        const generatedBlock = this.generatedContentMarkdown(metadata, generatedContent);
+        const generatedBlock = generatedContentMarkdown(metadata, generatedContent);
 
         if (transcriptIndex === -1) return `${contentWithTags.trimEnd()}\n\n${generatedBlock}\n`;
         return `${contentWithTags.slice(0, transcriptIndex).trimEnd()}\n\n${generatedBlock}\n${contentWithTags.slice(transcriptIndex)}`;
@@ -102,7 +121,7 @@ export class VaultStorage {
   }
 
   private updateFrontmatterTags(content: string, tags: string[]): string {
-    const yamlTags = this.generatedFrontmatterTags(tags);
+    const yamlTags = generatedFrontmatterTags(tags);
 
     if (!content.startsWith('---\n')) {
       return `---\n${yamlTags}\n---\n\n${content.trimStart()}`;
@@ -117,35 +136,6 @@ export class VaultStorage {
     const nextFrontmatter = withoutTags ? `${withoutTags}\n${yamlTags}` : yamlTags;
 
     return `---\n${nextFrontmatter}${rest}`;
-  }
-
-  private generatedFrontmatterTags(tags: string[]): string {
-    return `tags:\n${this.slugifiedGeneratedTags(tags).map((tag) => `  - ${tag}`).join('\n')}`;
-  }
-
-  private slugifiedGeneratedTags(tags: string[]): string[] {
-    const fallbacks = ['video-note', 'video-summary', 'generated-content', 'transcript', 'youtube'];
-    const result: string[] = [];
-
-    for (const tag of [...tags, ...fallbacks]) {
-      const slug = this.slugifyTag(tag);
-      if (!slug || result.includes(slug)) continue;
-      result.push(slug);
-      if (result.length === 5) break;
-    }
-
-    return result;
-  }
-
-  private slugifyTag(tag: string): string {
-    return tag
-      .replace(/^#+/, '')
-      .normalize('NFKD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .replace(/'/g, '')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '');
   }
 
   private async ensureFolder(path: string): Promise<void> {
@@ -189,74 +179,4 @@ export class VaultStorage {
     });
   }
 
-  private videoNoteMarkdown(
-    metadata: VideoMetadata,
-    subtitle: SubtitleLanguage,
-    transcript: Transcript,
-    providerLabel: string
-  ): string {
-    return `---
-videoUrl: ${yamlString(metadata.url)}
-videoId: ${yamlString(metadata.id)}
-title: ${yamlString(metadata.title)}
-subtitleLanguage: ${yamlString(`${subtitle.name} (${subtitle.code})`)}
-subtitleType: ${yamlString(subtitle.type)}
-aiProvider: ${yamlString(providerLabel)}
-createdAt: ${yamlString(new Date().toISOString())}
----
-
-# ${metadata.title}
-
-[Watch video](${metadata.url})
-
-## Summary
-
-_No generated summary yet._
-
-## Generated notes
-
-_No generated notes yet._
-
-## Chat history
-
-_No saved chat yet._
-
-## Transcript
-
-\`\`\`text
-${transcript.markdown}
-\`\`\`
-`;
-  }
-
-  private generatedContentMarkdown(
-    metadata: VideoMetadata,
-    generatedContent: GeneratedVideoNoteContent
-  ): string {
-    return `${this.generatedSectionsMarkdown(metadata, generatedContent)}\n\n## Chat history\n\n_No saved chat yet._`;
-  }
-
-  private generatedSectionsMarkdown(
-    metadata: VideoMetadata,
-    generatedContent: GeneratedVideoNoteContent
-  ): string {
-    return `## Summary\n\n${generatedContent.conciseSummary}\n\n## Generated notes\n\n${this.generatedNotesMarkdown(metadata, generatedContent)}`;
-  }
-
-  private generatedNotesMarkdown(
-    metadata: VideoMetadata,
-    generatedContent: GeneratedVideoNoteContent
-  ): string {
-    if (generatedContent.sections.length === 0) return '_No generated notes._';
-
-    return generatedContent.sections.map((section) => {
-      const claims = section.claims.map((claim) => {
-        const timestampUrl = createYouTubeTimestampUrl(metadata.url, claim.timestamp);
-        const timestamp = timestampUrl ? `[${claim.timestamp}](${timestampUrl})` : claim.timestamp;
-        return `- ${claim.text} (${timestamp})`;
-      });
-
-      return `### ${section.title}\n\n${section.summary}${claims.length > 0 ? `\n\n#### Timestamped claims\n\n${claims.join('\n')}` : ''}`;
-    }).join('\n\n');
-  }
 }

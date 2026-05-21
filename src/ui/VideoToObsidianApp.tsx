@@ -1,18 +1,17 @@
 import { useState } from 'react';
-import type VideoToObsidianPlugin from '../main';
 import type { ChatMessage, VideoSession } from '../domain';
-import { ChatService } from '../chat-service';
+import type { TranscriptChatSession, VideoToObsidianWorkflow } from '../application/ui-workflow';
 
 type Props = {
-  plugin: VideoToObsidianPlugin;
+  workflow: VideoToObsidianWorkflow;
 };
 
-export function VideoToObsidianApp({ plugin }: Props) {
+export function VideoToObsidianApp({ workflow }: Props) {
   const [url, setUrl] = useState('');
   const [status, setStatus] = useState('Enter a YouTube URL to begin.');
   const [error, setError] = useState('');
   const [session, setSession] = useState<VideoSession | null>(null);
-  const [chatService, setChatService] = useState<ChatService | null>(null);
+  const [transcriptChat, setTranscriptChat] = useState<TranscriptChatSession | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [savedAnswerIds, setSavedAnswerIds] = useState<Set<string>>(new Set());
   const [chatInput, setChatInput] = useState('');
@@ -39,10 +38,10 @@ export function VideoToObsidianApp({ plugin }: Props) {
 
   async function importVideo() {
     setStatus('Downloading Transcript and creating Video note...');
-    const importedSession = await run(() => plugin.importVideo(url, appendRuntimeLog));
+    const importedSession = await run(() => workflow.importVideo(url, appendRuntimeLog));
     if (!importedSession) return;
     setSession(importedSession);
-    setChatService(plugin.createChatService(importedSession, appendRuntimeLog));
+    setTranscriptChat(workflow.createTranscriptChat(importedSession, appendRuntimeLog));
     setMessages([]);
     setSavedAnswerIds(new Set());
     setStatus(`Ready: ${importedSession.metadata.title}`);
@@ -52,13 +51,13 @@ export function VideoToObsidianApp({ plugin }: Props) {
     if (!session) return;
     setIsGeneratingSummary(true);
     setStatus('Generating Video note summary...');
-    const generated = await run(() => plugin.generateSummary(session, appendRuntimeLog));
+    const generated = await run(() => workflow.generateVideoNoteContent(session, appendRuntimeLog));
     setIsGeneratingSummary(false);
     if (generated !== null) setStatus('Video note summary generated.');
   }
 
   async function sendChatMessage() {
-    if (!chatService || !chatInput.trim()) return;
+    if (!transcriptChat || !chatInput.trim()) return;
 
     const content = chatInput.trim();
     setChatInput('');
@@ -82,7 +81,7 @@ export function VideoToObsidianApp({ plugin }: Props) {
 
     await run(async () => {
       let assistantContent = '';
-      for await (const part of chatService.sendMessage(content)) {
+      for await (const part of transcriptChat.sendMessage(content)) {
         assistantContent += part;
         setMessages((current) =>
           current.map((message) =>
@@ -106,7 +105,7 @@ export function VideoToObsidianApp({ plugin }: Props) {
   async function saveChatTurn(question: ChatMessage, answer: ChatMessage) {
     if (!session || !answer.content.trim()) return;
     setStatus('Saving chat answer...');
-    const saved = await run(() => plugin.saveChatTurn(session, question.content, answer.content, appendRuntimeLog));
+    const saved = await run(() => workflow.saveChatTurn(session, question.content, answer.content, appendRuntimeLog));
     if (saved === null) return;
     setSavedAnswerIds((current) => new Set(current).add(answer.id));
     setStatus('Chat answer saved.');

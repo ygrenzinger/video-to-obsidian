@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { TFile, TFolder, type Vault } from 'obsidian';
-import { DEFAULT_SETTINGS } from './domain';
+import { DEFAULT_SETTINGS } from '../../domain';
 import { VaultStorage } from './vault-storage';
 
 const generatedContent = {
@@ -86,6 +86,32 @@ describe('VaultStorage', () => {
     expect(path).toBe('Research/Videos/A Video.md');
     expect(folders.has('Research')).toBe(true);
     expect(folders.has('Research/Videos')).toBe(true);
+  });
+
+  it('rehydrates timestamped cues from a stored Transcript in a reusable Video note', async () => {
+    const path = 'Video notes/Existing.md';
+    const file = Object.assign(Object.create(TFile.prototype) as TFile, { path });
+    const vault = {
+      getFileByPath: vi.fn((requestedPath: string) => (requestedPath === path ? file : null)),
+      cachedRead: vi.fn(async () => `# Existing
+
+## Transcript
+
+\`\`\`text
+[00:01] First claim.
+[01:02:03] Later claim.
+Plain line without timestamp.
+\`\`\`
+`)
+    } as unknown as Vault;
+
+    await expect(new VaultStorage(vault).readTranscript(path)).resolves.toMatchObject({
+      cues: [
+        { start: '00:01', end: '00:01', text: 'First claim.' },
+        { start: '01:02:03', end: '01:02:03', text: 'Later claim.' }
+      ],
+      markdown: '[00:01] First claim.\n[01:02:03] Later claim.\nPlain line without timestamp.'
+    });
   });
 
   it('updates generated content before the Transcript', async () => {

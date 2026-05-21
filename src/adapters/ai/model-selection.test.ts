@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_SETTINGS } from './domain';
+import { DEFAULT_SETTINGS } from '../../domain';
 import { configuredProviderLabel, selectModel } from './model-selection';
 
 describe('model selection', () => {

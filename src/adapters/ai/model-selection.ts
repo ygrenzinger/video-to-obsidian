@@ -2,19 +2,13 @@ import { createAnthropic } from '@ai-sdk/anthropic';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createMistral } from '@ai-sdk/mistral';
 import { createOpenAI } from '@ai-sdk/openai';
-import type { ModelConfiguration, SupportedProvider, VideoToObsidianSettings } from './domain';
-
-const DEFAULT_MODEL_IDS: Record<SupportedProvider, string> = {
-  mistral: 'mistral-small-latest',
-  google: 'gemini-2.0-flash',
-  anthropic: 'claude-3-5-haiku-latest',
-  openai: 'gpt-4o-mini'
-};
+import type { ModelConfiguration, SupportedProvider, VideoToObsidianSettings } from '../../domain';
+import { providerDefaultModelId } from './provider-catalog';
 
 export function selectModel(settings: VideoToObsidianSettings): ModelConfiguration {
   const provider = settings.aiProvider;
   const apiKey = settings.aiApiKey.trim();
-  const modelId = settings.aiModelId.trim() || DEFAULT_MODEL_IDS[provider];
+  const modelId = settings.aiModelId.trim() || providerDefaultModelId(provider);
 
   if (!apiKey) {
     throw new Error(`Set the ${provider} API key in the plugin settings.`);

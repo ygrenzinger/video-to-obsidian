@@ -1,7 +1,7 @@
 import { ItemView, WorkspaceLeaf } from 'obsidian';
 import { createRoot, Root } from 'react-dom/client';
-import { VideoToObsidianApp } from './ui/VideoToObsidianApp';
-import type VideoToObsidianPlugin from './main';
+import { VideoToObsidianApp } from '../../ui/VideoToObsidianApp';
+import type VideoToObsidianPlugin from './plugin';
 
 export const VIEW_TYPE_VIDEO_TO_OBSIDIAN = 'video-to-obsidian-view';
 
@@ -30,7 +30,7 @@ export class VideoToObsidianView extends ItemView {
     this.root = createRoot(mount, {
       identifierPrefix: `${this.plugin.manifest.id}-`
     });
-    this.root.render(<VideoToObsidianApp plugin={this.plugin} />);
+    this.root.render(<VideoToObsidianApp workflow={this.plugin} />);
   }
 
   async onClose(): Promise<void> {

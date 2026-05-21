@@ -1,4 +1,4 @@
-import type { Transcript, TranscriptCue } from './domain';
+import type { Transcript, TranscriptCue } from './index';
 
 export function parseSrt(srt: string): Transcript {
   const normalized = srt.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
@@ -42,6 +42,27 @@ export function parseSrt(srt: string): Transcript {
     cues,
     rawSrt: srt,
     markdown: cues.map((cue) => `[${cue.start}] ${cue.text}`).join('\n')
+  };
+}
+
+export function parseTranscriptMarkdown(markdown: string): Transcript {
+  const cues: TranscriptCue[] = [];
+
+  for (const line of markdown.split('\n')) {
+    const match = line.match(/^\[((?:\d{1,2}:)?\d{1,2}:\d{2})\]\s+(.*)$/);
+    if (!match) continue;
+
+    cues.push({
+      start: match[1],
+      end: match[1],
+      text: match[2].trim()
+    });
+  }
+
+  return {
+    cues,
+    rawSrt: '',
+    markdown
   };
 }
 

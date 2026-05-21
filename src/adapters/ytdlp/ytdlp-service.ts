@@ -1,8 +1,8 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import type { SubtitleLanguage, Transcript, VideoMetadata } from './domain';
-import { parseSrt } from './transcript';
-import { extractYouTubeVideoId } from './youtube';
+import type { SubtitleLanguage, Transcript, TranscriptSource, VideoMetadata } from '../../domain';
+import { parseSrt } from '../../domain/transcript';
+import { extractYouTubeVideoId } from '../../domain/youtube';
 
 const execFileAsync = promisify(execFile);
 
@@ -74,12 +74,27 @@ export class YtdlpService {
     subtitle: SubtitleLanguage;
     transcript: Transcript;
   }> {
+    const { metadata, source } = await this.discoverBestTranscriptSource(url);
+    return {
+      metadata,
+      subtitle: { code: source.code, name: source.name, type: source.type },
+      transcript: await this.downloadTranscript(source)
+    };
+  }
+
+  async discoverBestTranscriptSource(url: string): Promise<{
+    metadata: VideoMetadata;
+    source: TranscriptSource;
+  }> {
     const { metadata, subtitle, subtitleUrl } = await this.getBestTranscriptSource(url);
     return {
       metadata,
-      subtitle,
-      transcript: await this.downloadTranscriptFromSubtitleUrl(subtitleUrl)
+      source: { ...subtitle, url: subtitleUrl }
     };
+  }
+
+  async downloadTranscript(source: TranscriptSource): Promise<Transcript> {
+    return this.downloadTranscriptFromSubtitleUrl(source.url);
   }
 
   async getBestTranscriptSource(url: string): Promise<{

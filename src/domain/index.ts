@@ -17,6 +17,10 @@ export type SubtitleLanguage = {
   type: 'uploaded' | 'auto';
 };
 
+export type TranscriptSource = SubtitleLanguage & {
+  url: string;
+};
+
 export type TranscriptCue = {
   start: string;
   end: string;

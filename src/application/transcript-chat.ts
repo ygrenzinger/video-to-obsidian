@@ -1,9 +1,9 @@
-import { generateObject, streamText } from 'ai';
 import { z } from 'zod';
-import type { ChatMessage, ModelConfiguration, Transcript } from './domain';
+import type { ChatMessage, ModelConfiguration, Transcript } from '../domain';
+import { aiLanguageModelAdapter, type LanguageModelAdapter } from '../adapters/ai/language-model-adapter';
 import { buildTranscriptSystemPrompt, CHAT_TASK_PROMPT, GENERATE_CHAT_ANSWER_TITLE_TASK_PROMPT } from './prompts';
-import { formatLogError, formatTokenUsage, type RuntimeLog } from './runtime-log';
-import { createYouTubeTimestampUrl } from './youtube';
+import { formatLogError, formatTokenUsage, type RuntimeLog } from '../shared/runtime-log';
+import { createYouTubeTimestampUrl } from '../domain/youtube';
 
 const chatAnswerTitleSchema = z.object({
   title: z.string().min(1).describe('Concise Obsidian section title for the saved chat answer.')
@@ -16,7 +16,8 @@ export class ChatService {
     private readonly videoUrl: string,
     private readonly transcript: Transcript,
     private readonly modelConfig: ModelConfiguration,
-    private readonly onLog?: RuntimeLog
+    private readonly onLog?: RuntimeLog,
+    private readonly languageModel: LanguageModelAdapter = aiLanguageModelAdapter
   ) {}
 
   getMessages(): ChatMessage[] {
@@ -40,7 +41,7 @@ export class ChatService {
     this.log(`LLM chat request started (${this.modelConfig.provider}/${this.modelConfig.modelId}).`);
 
     try {
-      const result = streamText({
+      const result = this.languageModel.streamText({
         model: this.modelConfig.model,
         system: this.systemPrompt(),
         messages: this.messages.map((msg) => ({ role: msg.role, content: msg.content }))
@@ -112,12 +113,13 @@ export async function generateChatAnswerTitle(
   question: string,
   answer: string,
   modelConfig: ModelConfiguration,
-  onLog?: RuntimeLog
+  onLog?: RuntimeLog,
+  languageModel: LanguageModelAdapter = aiLanguageModelAdapter
 ): Promise<string> {
   onLog?.(`LLM chat answer title generation started (${modelConfig.provider}/${modelConfig.modelId}).`);
 
   try {
-    const result = await generateObject({
+    const result = await languageModel.generateObject({
       model: modelConfig.model,
       temperature: 0,
       schema: chatAnswerTitleSchema,

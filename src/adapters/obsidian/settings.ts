@@ -1,15 +1,7 @@
 import { App, Notice, PluginSettingTab, Setting } from 'obsidian';
-import type VideoToObsidianPlugin from './main';
-import type { SupportedProvider } from './domain';
-
-const PROVIDERS: SupportedProvider[] = ['mistral', 'google', 'anthropic', 'openai'];
-
-const DEFAULT_MODEL_IDS: Record<SupportedProvider, string> = {
-  mistral: 'mistral-small-latest',
-  google: 'gemini-2.0-flash',
-  anthropic: 'claude-3-5-haiku-latest',
-  openai: 'gpt-4o-mini'
-};
+import type VideoToObsidianPlugin from './plugin';
+import type { SupportedProvider } from '../../domain';
+import { providerDefaultModelId, providerOptions } from '../ai/provider-catalog';
 
 export class VideoToObsidianSettingTab extends PluginSettingTab {
   constructor(app: App, private readonly plugin: VideoToObsidianPlugin) {
@@ -62,8 +54,8 @@ export class VideoToObsidianSettingTab extends PluginSettingTab {
       .setName('Provider')
       .setDesc('Choose the AI API used for chat and generated Video note content.')
       .addDropdown((dropdown) => {
-        for (const provider of PROVIDERS) {
-          dropdown.addOption(provider, provider);
+        for (const provider of providerOptions) {
+          dropdown.addOption(provider.id, provider.id);
         }
 
         dropdown.setValue(this.plugin.settings.aiProvider).onChange(async (value) => {
@@ -91,10 +83,10 @@ export class VideoToObsidianSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName('Model ID')
-      .setDesc(`Optional. Leave empty to use ${DEFAULT_MODEL_IDS[this.plugin.settings.aiProvider]}.`)
+      .setDesc(`Optional. Leave empty to use ${providerDefaultModelId(this.plugin.settings.aiProvider)}.`)
       .addText((text) =>
         text
-          .setPlaceholder(DEFAULT_MODEL_IDS[this.plugin.settings.aiProvider])
+          .setPlaceholder(providerDefaultModelId(this.plugin.settings.aiProvider))
           .setValue(this.plugin.settings.aiModelId)
           .onChange(async (value) => {
             this.plugin.settings.aiModelId = value.trim();

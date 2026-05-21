@@ -1,8 +1,8 @@
-import { generateObject } from 'ai';
 import { z } from 'zod';
-import type { GeneratedVideoNoteContent, ModelConfiguration, Transcript, VideoMetadata } from './domain';
+import type { GeneratedVideoNoteContent, ModelConfiguration, Transcript, VideoMetadata } from '../domain';
+import { aiLanguageModelAdapter, type LanguageModelAdapter } from '../adapters/ai/language-model-adapter';
 import { buildTranscriptSystemPrompt, GENERATE_VIDEO_TOPIC_SUMMARIES_TASK_PROMPT } from './prompts';
-import { formatLogError, formatTokenUsage, type RuntimeLog } from './runtime-log';
+import { formatLogError, formatTokenUsage, type RuntimeLog } from '../shared/runtime-log';
 
 const sectionSchema = z.object({
   title: z.string().min(1).describe('Concise heading for one useful idea, pattern, trade-off, or lesson.'),
@@ -18,7 +18,7 @@ const sectionSchema = z.object({
 const videoNoteContentSchema = z.object({
   conciseSummary: z.string().min(1).describe('A concise 3-6 sentence summary of the video.'),
   tags: z.array(z.string().min(1)).length(5).describe('Exactly 5 tags for the whole Video note, without # prefixes.'),
-  sections: z.array(sectionSchema).describe('Useful, reusable notes extracted from the Transcript.')
+  sections: z.array(sectionSchema).describe('Useful, reusable generated note sections extracted from the Transcript.')
 });
 
 const SYSTEM_PROMPT = buildTranscriptSystemPrompt(GENERATE_VIDEO_TOPIC_SUMMARIES_TASK_PROMPT);
@@ -27,12 +27,13 @@ export async function generateVideoNoteContent(
   metadata: VideoMetadata,
   transcript: Transcript,
   modelConfig: ModelConfiguration,
-  onLog?: RuntimeLog
+  onLog?: RuntimeLog,
+  languageModel: LanguageModelAdapter = aiLanguageModelAdapter
 ): Promise<GeneratedVideoNoteContent> {
   onLog?.(`LLM Video note generation started (${modelConfig.provider}/${modelConfig.modelId}).`);
 
   try {
-    const result = await generateObject({
+    const result = await languageModel.generateObject({
       model: modelConfig.model,
       temperature: 0,
       schema: videoNoteContentSchema,
