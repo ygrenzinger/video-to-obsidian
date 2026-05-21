@@ -4,6 +4,7 @@ export type SupportedProvider = 'mistral' | 'google' | 'anthropic' | 'openai';
 
 export type VideoToObsidianSettings = {
   ytdlpPath: string;
+  videoNotesFolder: string;
   aiProvider: SupportedProvider;
   aiApiKey: string;
   aiModelId: string;
@@ -76,6 +77,7 @@ export type GeneratedVideoNoteContent = {
 
 export const DEFAULT_SETTINGS: VideoToObsidianSettings = {
   ytdlpPath: '',
+  videoNotesFolder: 'Video notes',
   aiProvider: 'mistral',
   aiApiKey: '',
   aiModelId: '',

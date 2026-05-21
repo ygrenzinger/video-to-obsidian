@@ -41,7 +41,7 @@ The MVP is desktop-only. It invokes local process APIs for `yt-dlp`, stores the 
 17. As an Obsidian user, I want an indexed Video note's stored Transcript to be reused, so that the plugin does not redownload material unnecessarily.
 18. As an Obsidian user, I want new Video notes to be created with safe file names, so that video titles with unsafe characters do not break vault writes.
 19. As an Obsidian user, I want generated Video note names to avoid collisions, so that existing notes are not overwritten.
-20. As an Obsidian user, I want new Video notes to be created at the vault root, so that the import destination is predictable.
+20. As an Obsidian user, I want new Video notes to be created in a configurable folder that defaults to `Video notes`, so that the import destination is predictable.
 21. As an Obsidian user, I want the Video note to contain video metadata, source URL, Transcript source language, Transcript source type, AI provider label, and creation time, so that the note remains understandable outside the plugin UI.
 22. As an Obsidian user, I want the Video note to include a link back to the video, so that I can return to the source quickly.
 23. As an Obsidian user, I want the Video note to start with placeholders for summary, generated note sections, and chat history, so that I understand what can be added later.
@@ -89,7 +89,7 @@ The MVP is desktop-only. It invokes local process APIs for `yt-dlp`, stores the 
 - Transcript source selection prefers uploaded sources over automatic original sources.
 - The Transcript parser is a deep module that turns downloaded source text into timestamped cues, raw source text, and Markdown suitable for storage and LLM prompts.
 - The plugin creates a Video note before any LLM call. Summary generation and chat are explicit post-import actions.
-- New Video notes are created at the vault root using a sanitized video title and collision-safe suffixes.
+- New Video notes are created in the configured Video notes folder using a sanitized video title and collision-safe suffixes.
 - The one-Video-note-per-video invariant is enforced through a persisted video index keyed by canonical video URL and video ID when available.
 - Reusing a Video note depends on both an index entry and the continued existence of the indexed vault file.
 - If an indexed Video note exists and contains a Transcript section, the plugin reuses that stored Transcript instead of downloading or regenerating content.
@@ -120,7 +120,7 @@ The MVP is desktop-only. It invokes local process APIs for `yt-dlp`, stores the 
 - YouTube URL helpers should be tested for supported URL shapes, invalid URLs, video ID extraction, timestamp parsing, and timestamp URL creation.
 - `yt-dlp` Transcript acquisition should be tested with fake command runners and fake Transcript source fetchers rather than real processes or network calls.
 - `yt-dlp` tests should cover uploaded Transcript source preference, automatic original source fallback, live chat exclusion where applicable, command logging, process throttling, missing executable guidance, permission guidance, bot-check guidance, and empty Transcript failures.
-- Vault storage should be tested with an in-memory vault stub and should cover Video note creation at the vault root, file-name sanitization, note collision handling, Video note reuse, generated Video note Markdown, Transcript reloading, timestamped claim links, generated content replacement, and saved chat answer append behavior.
+- Vault storage should be tested with an in-memory vault stub and should cover Video note creation in the configured folder, file-name sanitization, note collision handling, Video note reuse, generated Video note Markdown, Transcript reloading, timestamped claim links, generated content replacement, and saved chat answer append behavior.
 - Prompt composition should be tested by asserting durable constraints are present, such as Transcript-only evidence by default, exact timestamp requirements, external knowledge labeling for chat, and structured schema expectations for generated content.
 - Generated Video note content should be tested with a controllable model adapter or seam that verifies schema-constrained output, timestamp filtering, logging, and error propagation without calling real providers.
 - Chat behavior should be tested with a controllable model adapter or seam that verifies streamed output, persisted conversation messages, and Transcript-grounded prompt requirements without calling real providers.

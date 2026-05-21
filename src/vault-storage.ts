@@ -1,4 +1,4 @@
-import { TFile, Vault } from 'obsidian';
+import { normalizePath, TFile, TFolder, Vault } from 'obsidian';
 import type {
   ChatMessage,
   GeneratedVideoNoteContent,
@@ -43,7 +43,10 @@ export class VaultStorage {
     const existingPath = settings.videoIndex[metadata.url] ?? settings.videoIndex[metadata.id];
     if (existingPath && this.vault.getFileByPath(existingPath)) return existingPath;
 
-    const path = await this.nextAvailablePath(sanitizeFileName(metadata.title));
+    const folder = normalizePath(settings.videoNotesFolder.trim() || 'Video notes');
+    await this.ensureFolder(folder);
+
+    const path = await this.nextAvailablePath(folder, sanitizeFileName(metadata.title));
     await this.vault.create(path, this.videoNoteMarkdown(metadata, subtitle, transcript, providerLabel));
 
     settings.videoIndex[metadata.url] = path;
@@ -97,12 +100,27 @@ export class VaultStorage {
     });
   }
 
-  private async nextAvailablePath(basename: string): Promise<string> {
-    let candidate = `${basename}.md`;
+  private async ensureFolder(path: string): Promise<void> {
+    if (!path || path === '/') return;
+
+    const parts = path.split('/').filter(Boolean);
+    let current = '';
+
+    for (const part of parts) {
+      current = current ? `${current}/${part}` : part;
+      const existing = this.vault.getAbstractFileByPath(current);
+      if (existing instanceof TFolder) continue;
+      if (existing) throw new Error(`${current} exists and is not a folder.`);
+      await this.vault.createFolder(current);
+    }
+  }
+
+  private async nextAvailablePath(folder: string, basename: string): Promise<string> {
+    let candidate = normalizePath(`${folder}/${basename}.md`);
     let index = 2;
 
     while (this.vault.getAbstractFileByPath(candidate)) {
-      candidate = `${basename} ${index}.md`;
+      candidate = normalizePath(`${folder}/${basename} ${index}.md`);
       index += 1;
     }
 

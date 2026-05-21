@@ -154,6 +154,7 @@ function mergeSettings(
 
   return {
     ytdlpPath: loaded.ytdlpPath ?? defaults.ytdlpPath,
+    videoNotesFolder: loaded.videoNotesFolder?.trim() || defaults.videoNotesFolder,
     ...migratedAiSettings,
     videoIndex: loaded.videoIndex ?? {}
   };

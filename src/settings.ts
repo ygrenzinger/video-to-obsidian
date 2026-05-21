@@ -43,6 +43,19 @@ export class VideoToObsidianSettingTab extends PluginSettingTab {
         })
       );
 
+    new Setting(containerEl)
+      .setName('Video notes folder')
+      .setDesc('Folder where imported Video notes are created.')
+      .addText((text) =>
+        text
+          .setPlaceholder('Video notes')
+          .setValue(this.plugin.settings.videoNotesFolder)
+          .onChange(async (value) => {
+            this.plugin.settings.videoNotesFolder = value.trim() || 'Video notes';
+            await this.plugin.saveSettings();
+          })
+      );
+
     new Setting(containerEl).setName('AI provider').setHeading();
 
     new Setting(containerEl)

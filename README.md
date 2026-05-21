@@ -40,6 +40,7 @@ The Obsidian plugin release assets are:
 ## Settings
 
 - `yt-dlp executable`: full path to the executable. The plugin does not search common install locations.
+- `Video notes folder`: folder where imported Video notes are created. Defaults to `Video notes`.
 - `AI provider`: select Mistral, Google, Anthropic, or OpenAI.
 - `API key`: required key for the selected provider.
 - `Model ID`: optional override. Leave empty to use the selected provider's default model.
