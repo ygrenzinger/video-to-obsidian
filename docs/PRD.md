@@ -51,7 +51,7 @@ The MVP is desktop-only. It invokes local process APIs for `yt-dlp`, stores the 
 27. As an Obsidian user, I want generated summary content to be written into the Video note, so that the source record becomes useful without leaving Obsidian.
 28. As an Obsidian user, I want generated note sections inside the Video note, so that reusable ideas stay attached to the source record.
 29. As an Obsidian user, I want each generated note section to focus on one idea, pattern, warning, trade-off, example, or lesson, so that sections are reusable later.
-30. As an Obsidian user, I want generated note sections to include tags when useful, so that the generated content fits Obsidian discovery workflows.
+30. As an Obsidian user, I want generated Video note content to add five slugified frontmatter tags, so that the note fits Obsidian discovery workflows.
 31. As an Obsidian user, I want generated note sections to include timestamped claims when possible, so that each idea remains grounded in the Transcript.
 32. As an Obsidian user, I want timestamped claims to link to the video moment when possible, so that I can revisit the exact evidence.
 33. As an Obsidian user, I want unsupported generated claims filtered out, so that invented or mismatched timestamps do not enter the Video note.
@@ -95,7 +95,7 @@ The MVP is desktop-only. It invokes local process APIs for `yt-dlp`, stores the 
 - If an indexed Video note exists and contains a Transcript section, the plugin reuses that stored Transcript instead of downloading or regenerating content.
 - Video notes contain frontmatter metadata, a source video link, summary content, generated note sections, chat history, and the Transcript at the end.
 - The vault storage module is a deep module responsible for generating safe note paths, creating or reusing Video notes, updating generated content, preserving the Transcript at the end, reading stored Transcripts, and appending saved chat answers before the Transcript.
-- Generated Video note content uses a structured schema with a concise summary, generated note section title, generated note section summary, tags, and timestamped claims.
+- Generated Video note content uses a structured schema with a concise summary, five Video note tags, generated note section title, generated note section summary, and timestamped claims.
 - Generated content rendering is deterministic Markdown. Summary and generated note sections are replaced as a block between the summary heading and chat history heading when regenerated.
 - Timestamped claims are post-filtered against exact timestamps present in the Transcript, so prompt mistakes do not persist unsupported timestamps.
 - Timestamped claims link to the relevant YouTube timestamp when the timestamp can be parsed.

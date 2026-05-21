@@ -66,12 +66,12 @@ export type TimestampedClaim = {
 export type GeneratedVideoNoteSection = {
   title: string;
   summary: string;
-  tags: string[];
   claims: TimestampedClaim[];
 };
 
 export type GeneratedVideoNoteContent = {
   conciseSummary: string;
+  tags: string[];
   sections: GeneratedVideoNoteSection[];
 };
 

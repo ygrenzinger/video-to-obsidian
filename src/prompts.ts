@@ -31,12 +31,18 @@ The Video note already contains video metadata and the full Transcript.
 
 Generate:
 - A clear overall summary of the video.
+- Exactly 5 tags for the whole Video note.
 - One section for each main topic addressed in the video.
 
 Overall summary rules:
 - Write 3-6 sentences.
 - Cover the video's main purpose, progression, and conclusions.
 - Use only information supported by the Transcript.
+
+Tag rules:
+- Generate exactly 5 tags that describe the video's main topics.
+- Do not include # prefixes.
+- Tags may contain multiple words; they will be slugified before being written to Obsidian frontmatter.
 
 Topic section rules:
 - Create a section for every substantial topic the video addresses.

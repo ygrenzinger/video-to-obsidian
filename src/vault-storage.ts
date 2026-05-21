@@ -81,23 +81,71 @@ export class VaultStorage {
     if (!(file instanceof TFile)) return;
 
     await this.vault.process(file, (content) => {
+      const contentWithTags = this.updateFrontmatterTags(content, generatedContent.tags);
       const generatedMarkdown = this.generatedSectionsMarkdown(metadata, generatedContent);
       const startMarker = '## Summary';
       const endMarker = '\n## Chat history\n';
-      const startIndex = content.indexOf(startMarker);
-      const endIndex = content.indexOf(endMarker);
+      const startIndex = contentWithTags.indexOf(startMarker);
+      const endIndex = contentWithTags.indexOf(endMarker);
 
       if (startIndex === -1 || endIndex === -1 || endIndex <= startIndex) {
         const transcriptHeading = '\n## Transcript\n';
-        const transcriptIndex = content.indexOf(transcriptHeading);
+        const transcriptIndex = contentWithTags.indexOf(transcriptHeading);
         const generatedBlock = this.generatedContentMarkdown(metadata, generatedContent);
 
-        if (transcriptIndex === -1) return `${content.trimEnd()}\n\n${generatedBlock}\n`;
-        return `${content.slice(0, transcriptIndex).trimEnd()}\n\n${generatedBlock}\n${content.slice(transcriptIndex)}`;
+        if (transcriptIndex === -1) return `${contentWithTags.trimEnd()}\n\n${generatedBlock}\n`;
+        return `${contentWithTags.slice(0, transcriptIndex).trimEnd()}\n\n${generatedBlock}\n${contentWithTags.slice(transcriptIndex)}`;
       }
 
-      return `${content.slice(0, startIndex)}${generatedMarkdown}${content.slice(endIndex)}`;
+      return `${contentWithTags.slice(0, startIndex)}${generatedMarkdown}${contentWithTags.slice(endIndex)}`;
     });
+  }
+
+  private updateFrontmatterTags(content: string, tags: string[]): string {
+    const yamlTags = this.generatedFrontmatterTags(tags);
+
+    if (!content.startsWith('---\n')) {
+      return `---\n${yamlTags}\n---\n\n${content.trimStart()}`;
+    }
+
+    const endIndex = content.indexOf('\n---', 4);
+    if (endIndex === -1) return content;
+
+    const frontmatter = content.slice(4, endIndex);
+    const rest = content.slice(endIndex);
+    const withoutTags = frontmatter.replace(/^tags:\n(?:  - .*\n?)*/m, '').trimEnd();
+    const nextFrontmatter = withoutTags ? `${withoutTags}\n${yamlTags}` : yamlTags;
+
+    return `---\n${nextFrontmatter}${rest}`;
+  }
+
+  private generatedFrontmatterTags(tags: string[]): string {
+    return `tags:\n${this.slugifiedGeneratedTags(tags).map((tag) => `  - ${tag}`).join('\n')}`;
+  }
+
+  private slugifiedGeneratedTags(tags: string[]): string[] {
+    const fallbacks = ['video-note', 'video-summary', 'generated-content', 'transcript', 'youtube'];
+    const result: string[] = [];
+
+    for (const tag of [...tags, ...fallbacks]) {
+      const slug = this.slugifyTag(tag);
+      if (!slug || result.includes(slug)) continue;
+      result.push(slug);
+      if (result.length === 5) break;
+    }
+
+    return result;
+  }
+
+  private slugifyTag(tag: string): string {
+    return tag
+      .replace(/^#+/, '')
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/'/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
   }
 
   private async ensureFolder(path: string): Promise<void> {
@@ -202,18 +250,13 @@ ${transcript.markdown}
     if (generatedContent.sections.length === 0) return '_No generated notes._';
 
     return generatedContent.sections.map((section) => {
-      const tags = section.tags
-        .map((tag) => tag.replace(/^#/, '').trim())
-        .filter(Boolean)
-        .map((tag) => `#${tag}`)
-        .join(' ');
       const claims = section.claims.map((claim) => {
         const timestampUrl = createYouTubeTimestampUrl(metadata.url, claim.timestamp);
         const timestamp = timestampUrl ? `[${claim.timestamp}](${timestampUrl})` : claim.timestamp;
         return `- ${claim.text} (${timestamp})`;
       });
 
-      return `### ${section.title}\n\n${section.summary}${tags ? `\n\n${tags}` : ''}${claims.length > 0 ? `\n\n#### Timestamped claims\n\n${claims.join('\n')}` : ''}`;
+      return `### ${section.title}\n\n${section.summary}${claims.length > 0 ? `\n\n#### Timestamped claims\n\n${claims.join('\n')}` : ''}`;
     }).join('\n\n');
   }
 }

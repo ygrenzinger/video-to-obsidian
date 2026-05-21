@@ -5,11 +5,11 @@ import { VaultStorage } from './vault-storage';
 
 const generatedContent = {
   conciseSummary: 'This video explains how to preserve source context while creating useful notes.',
+  tags: ['Note Taking', 'Source Context', '#AI / Agents', 'Traceability', 'Generated Sections'],
   sections: [
     {
       title: 'Preserve source context',
       summary: 'Notes are more useful when generated ideas remain connected to their evidence.',
-      tags: ['note-taking', 'traceability'],
       claims: [{ text: 'The Transcript preserves a timestamped claim.', timestamp: '00:01' }]
     }
   ]
@@ -106,11 +106,34 @@ describe('VaultStorage', () => {
     );
 
     expect(content).toContain('## Summary\n\nThis video explains how to preserve source context');
+    expect(content).toContain('tags:\n  - note-taking\n  - source-context\n  - ai-agents\n  - traceability\n  - generated-sections');
     expect(content).toContain('### Preserve source context');
     expect(content).toContain('[00:01](https://youtu.be/dQw4w9WgXcQ?t=1)');
+    expect(content).not.toContain('#note-taking');
     expect(content).toContain('## Chat history\n\n_No saved chat yet._');
     expect(content.trimEnd().endsWith('```')).toBe(true);
     expect(content.indexOf('### Preserve source context')).toBeLessThan(content.indexOf('## Transcript'));
+  });
+
+  it('replaces existing frontmatter tags with generated slugified tags', async () => {
+    const path = 'Existing.md';
+    const file = Object.assign(Object.create(TFile.prototype) as TFile, { path });
+    let content = `---\ntitle: Existing\ntags:\n  - old-tag\n---\n\n# Existing\n\n## Summary\n\n_No generated summary yet._\n\n## Generated notes\n\n_No generated notes yet._\n\n## Chat history\n\n_No saved chat yet._\n\n## Transcript\n\n\`\`\`text\n[00:01] A timestamped claim.\n\`\`\`\n`;
+    const vault = {
+      getFileByPath: vi.fn((requestedPath: string) => (requestedPath === path ? file : null)),
+      process: vi.fn(async (_file: unknown, callback: (current: string) => string) => {
+        content = callback(content);
+      })
+    } as unknown as Vault;
+
+    await new VaultStorage(vault).updateGeneratedContent(
+      path,
+      { id: 'dQw4w9WgXcQ', title: 'Existing', url: 'https://youtu.be/dQw4w9WgXcQ' },
+      generatedContent
+    );
+
+    expect(content).toContain('---\ntitle: Existing\ntags:\n  - note-taking\n  - source-context\n  - ai-agents\n  - traceability\n  - generated-sections\n---');
+    expect(content).not.toContain('old-tag');
   });
 
   it('reuses an existing Video note for the same video URL', async () => {

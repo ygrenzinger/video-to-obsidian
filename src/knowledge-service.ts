@@ -7,7 +7,6 @@ import { formatLogError, formatTokenUsage, type RuntimeLog } from './runtime-log
 const sectionSchema = z.object({
   title: z.string().min(1).describe('Concise heading for one useful idea, pattern, trade-off, or lesson.'),
   summary: z.string().min(1).describe('1-3 concise sentences explaining the idea and why it matters.'),
-  tags: z.array(z.string().min(1)).default([]).describe('3-6 lowercase tags without # prefixes.'),
   claims: z.array(
     z.object({
       text: z.string().min(1).describe('Specific claim or supporting detail grounded in the Transcript.'),
@@ -18,6 +17,7 @@ const sectionSchema = z.object({
 
 const videoNoteContentSchema = z.object({
   conciseSummary: z.string().min(1).describe('A concise 3-6 sentence summary of the video.'),
+  tags: z.array(z.string().min(1)).length(5).describe('Exactly 5 tags for the whole Video note, without # prefixes.'),
   sections: z.array(sectionSchema).describe('Useful, reusable notes extracted from the Transcript.')
 });
 
