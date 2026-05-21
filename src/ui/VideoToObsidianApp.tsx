@@ -126,36 +126,11 @@ export function VideoToObsidianApp({ plugin }: Props) {
             onChange={(event) => setUrl(event.currentTarget.value)}
           />
           <button onClick={importVideo}>Create Video note</button>
+          {session ? <button disabled={isGeneratingSummary} onClick={generateSummary}>Generate summary</button> : null}
         </div>
         <div className="vto-muted">{status}</div>
         {error ? <div className="vto-error">{error}</div> : null}
       </section>
-
-      <section className="vto-panel vto-column">
-        <div className="vto-row vto-row-between">
-          <h3>Runtime log</h3>
-          <button disabled={runtimeLogs.length === 0} onClick={() => setRuntimeLogs([])}>Clear</button>
-        </div>
-        {runtimeLogs.length === 0 ? (
-          <div className="vto-muted">yt-dlp and LLM calls will appear here.</div>
-        ) : (
-          <pre className="vto-runtime-log">{runtimeLogs.join('\n')}</pre>
-        )}
-      </section>
-
-      {session ? (
-        <section className="vto-panel vto-column">
-          <h3>{session.metadata.title}</h3>
-          <div className="vto-row vto-row-between">
-            <div className="vto-muted">Video note: {session.videoNotePath}</div>
-            <button disabled={isGeneratingSummary} onClick={generateSummary}>Generate summary</button>
-          </div>
-          <details>
-            <summary>Transcript preview</summary>
-            <pre className="vto-transcript">{session.transcript.markdown}</pre>
-          </details>
-        </section>
-      ) : null}
 
       {session ? (
         <section className="vto-panel vto-column">
@@ -201,6 +176,18 @@ export function VideoToObsidianApp({ plugin }: Props) {
           </div>
         </section>
       ) : null}
+
+      <section className="vto-panel vto-column">
+        <div className="vto-row vto-row-between">
+          <h3>Runtime log</h3>
+          <button disabled={runtimeLogs.length === 0} onClick={() => setRuntimeLogs([])}>Clear</button>
+        </div>
+        {runtimeLogs.length === 0 ? (
+          <div className="vto-muted">yt-dlp and LLM calls will appear here.</div>
+        ) : (
+          <pre className="vto-runtime-log">{runtimeLogs.join('\n')}</pre>
+        )}
+      </section>
 
     </>
   );

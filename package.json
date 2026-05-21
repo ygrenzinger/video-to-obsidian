@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Turn YouTube subtitles into traceable Obsidian notes.",
   "main": "main.js",
-  "packageManager": "pnpm@11.1.2",
+  "packageManager": "pnpm@11.1.3",
   "scripts": {
     "dev": "node esbuild.config.mjs",
     "build": "tsc --noEmit --skipLibCheck && node esbuild.config.mjs production",
