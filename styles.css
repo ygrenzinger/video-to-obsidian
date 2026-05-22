@@ -78,7 +78,19 @@
 }
 
 .vto-message-content {
+  overflow-wrap: anywhere;
+}
+
+.vto-message-plain {
   white-space: pre-wrap;
+}
+
+.vto-message-markdown > :first-child {
+  margin-top: 0;
+}
+
+.vto-message-markdown > :last-child {
+  margin-bottom: 0;
 }
 
 .vto-transcript {

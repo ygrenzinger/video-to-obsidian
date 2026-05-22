@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf } from 'obsidian';
+import { ItemView, MarkdownRenderer, WorkspaceLeaf } from 'obsidian';
 import { createRoot, Root } from 'react-dom/client';
 import { VideoToObsidianApp } from '../../ui/VideoToObsidianApp';
 import type VideoToObsidianPlugin from './plugin';
@@ -30,7 +30,14 @@ export class VideoToObsidianView extends ItemView {
     this.root = createRoot(mount, {
       identifierPrefix: `${this.plugin.manifest.id}-`
     });
-    this.root.render(<VideoToObsidianApp workflow={this.plugin} />);
+    this.root.render(
+      <VideoToObsidianApp
+        workflow={this.plugin}
+        renderMarkdown={(markdown, element, sourcePath) =>
+          MarkdownRenderer.render(this.app, markdown, element, sourcePath, this)
+        }
+      />
+    );
   }
 
   async onClose(): Promise<void> {

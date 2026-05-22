@@ -1,12 +1,15 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ChatMessage, VideoSession } from '../domain';
 import type { TranscriptChatSession, VideoToObsidianWorkflow } from '../application/ui-workflow';
 
+type RenderMarkdown = (markdown: string, element: HTMLElement, sourcePath: string) => Promise<void>;
+
 type Props = {
   workflow: VideoToObsidianWorkflow;
+  renderMarkdown?: RenderMarkdown;
 };
 
-export function VideoToObsidianApp({ workflow }: Props) {
+export function VideoToObsidianApp({ workflow, renderMarkdown }: Props) {
   const [url, setUrl] = useState('');
   const [status, setStatus] = useState('Enter a YouTube URL to begin.');
   const [error, setError] = useState('');
@@ -140,11 +143,21 @@ export function VideoToObsidianApp({ workflow }: Props) {
               <article className="vto-chat-turn" key={turn.answer.id}>
                 <div className="vto-chat-block">
                   <div className="vto-message-role">Question</div>
-                  <div className="vto-message-content">{turn.question.content}</div>
+                  <div className="vto-message-content vto-message-plain">{turn.question.content}</div>
                 </div>
                 <div className="vto-chat-block">
                   <div className="vto-message-role">Answer</div>
-                  <div className="vto-message-content">{turn.answer.content || 'Generating...'}</div>
+                  {renderMarkdown && session && turn.answer.content.trim() && turn.answer.streamingComplete ? (
+                    <MarkdownAnswer
+                      markdown={turn.answer.content}
+                      renderMarkdown={renderMarkdown}
+                      sourcePath={session.videoNotePath}
+                    />
+                  ) : (
+                    <div className="vto-message-content vto-message-plain">
+                      {turn.answer.content || 'Generating...'}
+                    </div>
+                  )}
                 </div>
                 <div className="vto-row vto-row-between">
                   <div className="vto-muted">
@@ -190,6 +203,41 @@ export function VideoToObsidianApp({ workflow }: Props) {
 
     </>
   );
+}
+
+function MarkdownAnswer({
+  markdown,
+  renderMarkdown,
+  sourcePath
+}: {
+  markdown: string;
+  renderMarkdown: RenderMarkdown;
+  sourcePath: string;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const element = containerRef.current;
+    if (!element) return;
+
+    element.textContent = '';
+    let cancelled = false;
+
+    void renderMarkdown(markdown, element, sourcePath)
+      .then(() => {
+        if (cancelled) element.textContent = '';
+      })
+      .catch(() => {
+        if (!cancelled) element.textContent = markdown;
+      });
+
+    return () => {
+      cancelled = true;
+      element.textContent = '';
+    };
+  }, [markdown, renderMarkdown, sourcePath]);
+
+  return <div className="vto-message-content vto-message-markdown markdown-rendered" ref={containerRef} />;
 }
 
 function toChatTurns(messages: ChatMessage[]): Array<{ question: ChatMessage; answer: ChatMessage }> {
