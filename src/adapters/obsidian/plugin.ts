@@ -71,6 +71,7 @@ export default class VideoToObsidianPlugin extends Plugin implements VideoToObsi
     });
 
     await this.saveSettings();
+    await this.openVideoNote(result.videoNotePath);
     new Notice(result.reused ? `Reusing existing Video note: ${result.videoNotePath}` : `Video note ready: ${result.videoNotePath}`);
 
     return result;
@@ -130,6 +131,15 @@ export default class VideoToObsidianPlugin extends Plugin implements VideoToObsi
     }
 
     return path;
+  }
+
+  private async openVideoNote(path: string): Promise<void> {
+    const file = this.app.vault.getFileByPath(path);
+    if (!file) return;
+
+    const leaf = this.app.workspace.getLeaf('tab');
+    await leaf.openFile(file, { active: true });
+    await this.app.workspace.revealLeaf(leaf);
   }
 }
 
