@@ -80,37 +80,29 @@ The MVP is desktop-only. It invokes local process APIs for `yt-dlp`, stores the 
 
 ## Implementation Decisions
 
-- The product is an Obsidian desktop plugin, not a web app or mobile-first feature.
-- The desktop-only constraint is accepted because the plugin invokes the user's installed `yt-dlp` executable through local process APIs.
+Durable architecture decisions are recorded in ADRs:
+
+- [Use Desktop Plugin With Local yt-dlp](./adr/0001-use-desktop-plugin-with-local-ytdlp.md)
+- [Keep Generated Knowledge Inside One Video Note](./adr/0002-keep-generated-knowledge-inside-one-video-note.md)
+- [Create Video Note Before LLM Generation](./adr/0003-create-video-note-before-llm-generation.md)
+- [Store Provider Keys In Obsidian Plugin Data For MVP](./adr/0004-store-provider-keys-in-obsidian-plugin-data-for-mvp.md)
+
+The remaining MVP implementation expectations are:
+
 - The plugin exposes a custom Obsidian view, a ribbon icon, and an open command for the import workflow.
-- The import flow starts from a YouTube URL and validates that the URL resolves to a supported YouTube video ID before running `yt-dlp`.
-- The `yt-dlp` integration is a deep module with a small interface for testing the executable, discovering the best Transcript source, and downloading the Transcript.
-- The `yt-dlp` integration does not search common install locations. Users must configure the full executable path.
-- Transcript source selection prefers uploaded sources over automatic original sources.
-- The Transcript parser is a deep module that turns downloaded source text into timestamped cues, raw source text, and Markdown suitable for storage and LLM prompts.
-- The plugin creates a Video note before any LLM call. Summary generation and chat are explicit post-import actions.
-- New Video notes are created in the configured Video notes folder using a sanitized video title and collision-safe suffixes.
-- The one-Video-note-per-video invariant is enforced through a persisted video index keyed by canonical video URL and video ID when available.
-- Reusing a Video note depends on both an index entry and the continued existence of the indexed vault file.
-- If an indexed Video note exists and contains a Transcript section, the plugin reuses that stored Transcript instead of downloading or regenerating content.
-- Video notes contain frontmatter metadata, a source video link, summary content, generated note sections, chat history, and the Transcript at the end.
-- The vault storage module is a deep module responsible for generating safe note paths, creating or reusing Video notes, updating generated content, preserving the Transcript at the end, reading stored Transcripts, and appending saved chat answers before the Transcript.
-- Generated Video note content uses a structured schema with a concise summary, five Video note tags, generated note section title, generated note section summary, and timestamped claims.
-- Generated content rendering is deterministic Markdown. Summary and generated note sections are replaced as a block between the summary heading and chat history heading when regenerated.
-- Timestamped claims are post-filtered against exact timestamps present in the Transcript, so prompt mistakes do not persist unsupported timestamps.
-- Timestamped claims link to the relevant YouTube timestamp when the timestamp can be parsed.
-- The prompt module defines a shared Transcript system prompt and task-specific prompts for chat and generated Video note content.
-- The shared prompt treats the Transcript as the primary evidence source, forbids invented timestamps, preserves nuance, and tells the model not to generate clickable video links.
-- Chat prompts allow external knowledge only when the user explicitly asks for it and require outside context to be labeled.
-- Generated content prompts prioritize focused reusable sections, allow few or no generated note sections when the Transcript is weak, and require structured output matching the schema.
+- The import flow starts from a YouTube URL, validates that it resolves to a supported YouTube video ID, then uses the configured `yt-dlp` executable to discover metadata and the best Transcript source.
+- `yt-dlp` does not search common install locations. Users must configure the full executable path, and settings include a test action for setup feedback.
+- Transcript source selection prefers uploaded sources, then falls back to original automatic sources when available.
+- Transcript parsing preserves timestamped cues as Markdown suitable for storage, preview, prompts, and timestamped claims.
+- New Video notes are created in the configured Video notes folder using sanitized, collision-safe names.
+- Repeated imports reuse an indexed Video note only when the indexed file still exists and contains a stored Transcript.
+- Generated Video note content uses structured model output for the concise summary, five tags, generated note sections, and timestamped claims.
+- Generated content rendering is deterministic Markdown. Regeneration replaces the summary and generated note section block while preserving saved chat answers and the Transcript.
+- Timestamped claims are kept only when their timestamps appear exactly in the Transcript, and parseable timestamps link back to the video moment.
+- Chat and generation share Transcript-grounded prompt rules; chat may use external knowledge only when the user explicitly asks and requires that outside context to be labeled.
 - AI model selection is centralized around one selected provider, one required API key, and one optional model ID override.
-- When the optional model ID is empty, model selection uses the selected provider's default model.
-- AI provider credentials are configured in Obsidian plugin settings and stored in Obsidian plugin data as plain text for MVP usability.
-- The chat module owns conversation state and streams assistant responses from the selected model.
-- The React view coordinates user actions and presentation state but delegates import, chat, storage, generation, model selection, and Transcript acquisition to plugin services.
-- Runtime logging is passed as a callback to long-running process and LLM operations so the UI can show progress without coupling lower-level modules to React.
-- Major modules to maintain or extend are the plugin shell, settings, YouTube URL helpers, `yt-dlp` Transcript acquisition, Transcript parsing, vault storage, AI model selection, prompts, Transcript chat, generated Video note content, runtime logging, and the React custom view.
-- The deepest modules for future evolution are Transcript acquisition, Transcript parsing, vault storage, prompt composition, chat, and generated Video note content because each hides complex behavior behind a small testable interface.
+- The React view coordinates user actions and presentation state while delegating import, storage, generation, chat, model selection, Transcript acquisition, and runtime logging to focused services.
+- The deepest modules for future evolution are Transcript acquisition, Transcript parsing, Video note storage, prompt composition, chat, and generated Video note content because each hides complex behavior behind a small testable interface.
 
 ## Testing Decisions
 
@@ -150,8 +142,8 @@ The MVP is desktop-only. It invokes local process APIs for `yt-dlp`, stores the 
 
 ## Further Notes
 
-- This PRD uses the project glossary: Video note, generated note section, Transcript, and Timestamped claim.
-- The current architecture reflects the desktop plugin decision, settings-managed selected AI provider key, explicit post-import LLM calls, and generated knowledge living inside the Video note.
+- This PRD uses the project glossary: Video note, generated note section, Transcript, Transcript source, Timestamped claim, Saved chat answer, and AI provider.
+- The current architecture reflects the ADRs for desktop-local Transcript acquisition, single Video note ownership, explicit post-import LLM calls, and MVP provider key storage.
 - The highest-risk external dependencies are YouTube Transcript availability, `yt-dlp` behavior, local executable configuration, and AI provider availability.
 - The highest-risk product behavior is preserving trust: generated chat answers and generated note sections must remain grounded in the Transcript and traceable back to timestamps.
 - The prompt module is now an important product boundary because it keeps chat and Generate summary aligned on evidence, timestamp, and external-knowledge rules.
