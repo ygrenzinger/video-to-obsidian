@@ -4,15 +4,17 @@ These proposals come from a read-only architecture review using the project glos
 
 ## 1. Deepen The Video Note Document Module
 
+**Status:** Implemented. Markdown document rules now live in `src/markdown/video-note-document.ts`, while `VaultStorage` owns vault I/O.
+
 **Files:**
 
-- `src/markdown/video-note-markdown.ts`
+- `src/markdown/video-note-document.ts`
 - `src/adapters/obsidian/vault-storage.ts`
-- `src/adapters/obsidian/vault-storage.test.ts`
+- `src/markdown/video-note-document.test.ts`
 
 **Problem:**
 
-The **Video note** Markdown format is split across modules. `video-note-markdown.ts` renders headings, but `vault-storage.ts` edits by hardcoded string markers like `## Summary`, `## Chat history`, and `## Transcript`.
+The **Video note** Markdown format used to be split across modules. `video-note-markdown.ts` rendered headings, while `vault-storage.ts` edited by hardcoded string markers like `## Summary`, `## Chat history`, and `## Transcript`.
 
 **Solution:**
 
@@ -135,16 +137,16 @@ More leverage at the workflow interface, better user feedback, easier workflow-l
 
 - `src/domain/index.ts`
 - `src/application/video-note-generation.ts`
-- `src/markdown/video-note-markdown.ts`
+- `src/markdown/video-note-document.ts`
 - `src/ui/VideoToObsidianApp.tsx`
 
 **Problem:**
 
-Some names still say `GeneratedVideoNoteContent`, `generateSummary`, `Generated notes`, and `SubtitleLanguage`. These partially conflict with `CONTEXT.md` terms: **Generated note section**, **Transcript**, and **Timestamped claim**.
+Some names still say `GeneratedVideoNoteContent`, `generateSummary`, and `SubtitleLanguage`. These partially conflict with `CONTEXT.md` terms: **Generated notes**, **Generated note section**, **Transcript**, and **Timestamped claim**.
 
 **Solution:**
 
-Rename carefully where it does not break persisted Markdown expectations. Consider whether the persisted heading should become `## Generated note sections`.
+Rename carefully where it does not break persisted Markdown expectations. Keep the persisted heading `## Generated notes`, which is now the domain term for the generated-content block.
 
 **Benefits:**
 
