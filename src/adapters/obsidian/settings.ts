@@ -13,6 +13,10 @@ export class VideoToObsidianSettingTab extends PluginSettingTab {
     containerEl.empty();
 
     new Setting(containerEl)
+      .setName('Plugin version')
+      .setDesc(this.plugin.manifest.version);
+
+    new Setting(containerEl)
       .setName('yt-dlp executable')
       .setDesc('Set the full path to the yt-dlp executable. The plugin will not search common install locations.')
       .addText((text) =>
