@@ -45,4 +45,4 @@ The Obsidian plugin release assets are:
 - `API key`: required key for the selected provider.
 - `Model ID`: optional override. Leave empty to use the selected provider's default model.
 
-The selected provider key is stored in Obsidian plugin data as plain text.
+Provider API keys are stored in Obsidian secret storage, outside the plugin `data.json` file.

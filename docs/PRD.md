@@ -18,7 +18,7 @@ After import, the user can click `Generate summary` to create structured LLM con
 
 After import, the user can chat with the Transcript through a configured AI provider. The chat prompt uses the Transcript as the primary evidence source, allows external knowledge only when the user explicitly asks for it, and requires unsupported answers to say what is missing. Each completed answer has its own save action, which appends that question-and-answer turn to the Video note before the Transcript.
 
-The MVP is desktop-only. It invokes local process APIs for `yt-dlp`, stores the selected AI provider key in Obsidian plugin data, and prioritizes traceability, setup clarity, and simple Markdown ownership over mobile support or a companion service.
+The MVP is desktop-only. It invokes local process APIs for `yt-dlp`, stores AI provider keys in Obsidian secret storage, and prioritizes traceability, setup clarity, and simple Markdown ownership over mobile support or a companion service.
 
 ## User Stories
 
@@ -72,7 +72,7 @@ The MVP is desktop-only. It invokes local process APIs for `yt-dlp`, stores the 
 48. As an Obsidian user, I want the selected provider API key to be required, so that LLM actions fail early with clear setup guidance when the key is missing.
 49. As an Obsidian user, I want the model ID to be optional, so that I can use a sensible default unless I need a specific model.
 50. As an Obsidian user, I want support for Mistral, Google, Anthropic, and OpenAI, so that I can use a provider available to my account and budget.
-51. As an Obsidian user, I want the selected provider key stored in Obsidian plugin data for the MVP, so that setup is simple.
+51. As an Obsidian user, I want provider keys stored outside plugin `data.json`, so that I can commit or sync my vault without committing API keys.
 52. As an Obsidian user, I want clear failure guidance when the selected provider key is missing, so that I know what to set up.
 53. As an Obsidian user, I want all generated knowledge to remain in my vault as Markdown, so that I retain ownership and can edit notes manually.
 54. As an Obsidian user, I want generated content to use consistent prompt rules across chat and summary generation, so that both workflows preserve traceability.
@@ -128,7 +128,6 @@ The remaining MVP implementation expectations are:
 - Downloading or storing video/audio files.
 - A cloud service or companion server for credential management.
 - OAuth-based AI provider authentication.
-- Encrypted storage for the selected AI provider key in the MVP.
 - Full Transcript editing workflows.
 - Multi-video chat or cross-video synthesis.
 - Automatic LLM generation during import.

@@ -7,16 +7,15 @@ describe('model selection', () => {
     const settings = structuredClone(DEFAULT_SETTINGS);
     settings.aiProvider = 'openai';
 
-    expect(() => selectModel(settings)).toThrow('Set the openai API key');
-    expect(configuredProviderLabel(settings)).toBe('openai (not configured)');
+    expect(() => selectModel(settings, '')).toThrow('Set the openai API key');
+    expect(configuredProviderLabel(settings, '')).toBe('openai (not configured)');
   });
 
   it('uses the selected provider default model when no model override is set', () => {
     const settings = structuredClone(DEFAULT_SETTINGS);
     settings.aiProvider = 'google';
-    settings.aiApiKey = 'test-key';
 
-    expect(selectModel(settings)).toMatchObject({
+    expect(selectModel(settings, 'test-key')).toMatchObject({
       provider: 'google',
       modelId: 'gemini-2.0-flash'
     });
@@ -25,10 +24,9 @@ describe('model selection', () => {
   it('uses the optional model override when set', () => {
     const settings = structuredClone(DEFAULT_SETTINGS);
     settings.aiProvider = 'anthropic';
-    settings.aiApiKey = 'test-key';
     settings.aiModelId = 'claude-custom';
 
-    expect(selectModel(settings)).toMatchObject({
+    expect(selectModel(settings, 'test-key')).toMatchObject({
       provider: 'anthropic',
       modelId: 'claude-custom'
     });

@@ -1,3 +1,5 @@
-# Store Provider Keys In Obsidian Plugin Data For MVP
+# Store Provider Keys In Obsidian Secret Storage
 
-For the MVP, the selected AI provider key is stored in Obsidian plugin data as plain text. This favors simple local setup across supported providers over adding a companion credential service or encrypted storage now, with the explicit trade-off that users must treat plugin data as sensitive.
+AI provider keys are stored in Obsidian secret storage instead of plugin `data.json`. Normal plugin settings remain in Obsidian plugin data, but API keys are kept outside the vault files users commonly commit or sync.
+
+This is a breaking settings change. Existing API keys previously saved in plugin data are ignored and must be entered again through the plugin settings.

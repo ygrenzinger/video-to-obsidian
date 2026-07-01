@@ -60,7 +60,6 @@ export class VideoToObsidianSettingTab extends PluginSettingTab {
 
         dropdown.setValue(this.plugin.settings.aiProvider).onChange(async (value) => {
           this.plugin.settings.aiProvider = value as SupportedProvider;
-          this.plugin.settings.aiApiKey = '';
           this.plugin.settings.aiModelId = '';
           await this.plugin.saveSettings();
           this.display();
@@ -69,15 +68,14 @@ export class VideoToObsidianSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName(`${this.plugin.settings.aiProvider} API key`)
-      .setDesc('Required. Stored in Obsidian plugin data as plain text.')
+      .setDesc('Required. Stored in Obsidian secret storage, outside plugin data.json.')
       .addText((text) => {
         text.inputEl.type = 'password';
         text
           .setPlaceholder('Required')
-          .setValue(this.plugin.settings.aiApiKey)
+          .setValue(this.plugin.getAiApiKey())
           .onChange(async (value) => {
-            this.plugin.settings.aiApiKey = value.trim();
-            await this.plugin.saveSettings();
+            this.plugin.setAiApiKey(value);
           });
       });
 

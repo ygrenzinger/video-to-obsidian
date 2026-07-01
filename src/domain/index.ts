@@ -6,7 +6,6 @@ export type VideoToObsidianSettings = {
   ytdlpPath: string;
   videoNotesFolder: string;
   aiProvider: SupportedProvider;
-  aiApiKey: string;
   aiModelId: string;
   videoIndex: Record<string, string>;
 };
@@ -83,7 +82,6 @@ export const DEFAULT_SETTINGS: VideoToObsidianSettings = {
   ytdlpPath: '',
   videoNotesFolder: 'Video notes',
   aiProvider: 'mistral',
-  aiApiKey: '',
   aiModelId: '',
   videoIndex: {}
 };

@@ -4,13 +4,13 @@ import { ChatService, generateChatAnswerTitle } from '../../application/transcri
 import {
   DEFAULT_SETTINGS,
   type ChatMessage,
-  type SupportedProvider,
   type VideoSession,
   type VideoToObsidianSettings
 } from '../../domain';
 import { generateVideoNoteContent } from '../../application/video-note-generation';
 import { importVideo as importVideoUseCase } from '../../application/import-video';
 import { configuredProviderLabel, selectModel } from '../ai/model-selection';
+import { AiCredentialStore } from './ai-credential-store';
 import { VideoToObsidianSettingTab } from './settings';
 import { VaultStorage } from './vault-storage';
 import { VideoToObsidianView, VIEW_TYPE_VIDEO_TO_OBSIDIAN } from './view';
@@ -20,8 +20,10 @@ import type { TranscriptChatSession, VideoToObsidianWorkflow } from '../../appli
 
 export default class VideoToObsidianPlugin extends Plugin implements VideoToObsidianWorkflow {
   settings: VideoToObsidianSettings = structuredClone(DEFAULT_SETTINGS);
+  private credentials!: AiCredentialStore;
 
   async onload(): Promise<void> {
+    this.credentials = new AiCredentialStore(this.app);
     await this.loadSettings();
 
     this.registerView(
@@ -67,7 +69,7 @@ export default class VideoToObsidianPlugin extends Plugin implements VideoToObsi
       settings: this.settings,
       transcriptAcquisition: ytdlp,
       videoNoteStore: storage,
-      providerLabel: configuredProviderLabel(this.settings)
+      providerLabel: configuredProviderLabel(this.settings, this.getAiApiKey())
     });
 
     await this.saveSettings();
@@ -78,14 +80,14 @@ export default class VideoToObsidianPlugin extends Plugin implements VideoToObsi
   }
 
   createTranscriptChat(session: VideoSession, onLog?: RuntimeLog): TranscriptChatSession {
-    return new ChatService(session.metadata.url, session.transcript, selectModel(this.settings), onLog);
+    return new ChatService(session.metadata.url, session.transcript, this.selectConfiguredModel(), onLog);
   }
 
   async generateVideoNoteContent(session: VideoSession, onLog?: RuntimeLog): Promise<void> {
     const generatedContent = await generateVideoNoteContent(
       session.metadata,
       session.transcript,
-      selectModel(this.settings),
+      this.selectConfiguredModel(),
       onLog
     );
     await new VaultStorage(this.app.vault).updateGeneratedContent(
@@ -102,7 +104,7 @@ export default class VideoToObsidianPlugin extends Plugin implements VideoToObsi
   }
 
   async saveChatTurn(session: VideoSession, question: string, answer: string, onLog?: RuntimeLog): Promise<void> {
-    const title = await generateChatAnswerTitle(question, answer, selectModel(this.settings), onLog);
+    const title = await generateChatAnswerTitle(question, answer, this.selectConfiguredModel(), onLog);
     await new VaultStorage(this.app.vault).appendChatTurn(session.videoNotePath, title, answer);
     new Notice('Chat answer appended to the Video note.');
   }
@@ -114,6 +116,18 @@ export default class VideoToObsidianPlugin extends Plugin implements VideoToObsi
 
   async saveSettings(): Promise<void> {
     await this.saveData(this.settings);
+  }
+
+  getAiApiKey(): string {
+    return this.credentials.getApiKey(this.settings.aiProvider);
+  }
+
+  setAiApiKey(apiKey: string): void {
+    this.credentials.setApiKey(this.settings.aiProvider, apiKey);
+  }
+
+  private selectConfiguredModel() {
+    return selectModel(this.settings, this.getAiApiKey());
   }
 
   private createYtdlpService(onLog?: RuntimeLog): YtdlpService {
@@ -147,45 +161,11 @@ function mergeSettings(
   defaults: VideoToObsidianSettings,
   loaded: Partial<VideoToObsidianSettings>
 ): VideoToObsidianSettings {
-  const migratedAiSettings = migrateAiSettings(defaults, loaded);
-
   return {
     ytdlpPath: loaded.ytdlpPath ?? defaults.ytdlpPath,
     videoNotesFolder: loaded.videoNotesFolder?.trim() || defaults.videoNotesFolder,
-    ...migratedAiSettings,
+    aiProvider: loaded.aiProvider ?? defaults.aiProvider,
+    aiModelId: loaded.aiModelId ?? defaults.aiModelId,
     videoIndex: loaded.videoIndex ?? {}
-  };
-}
-
-function migrateAiSettings(
-  defaults: VideoToObsidianSettings,
-  loaded: Partial<VideoToObsidianSettings> & {
-    providers?: Partial<Record<SupportedProvider, { apiKey?: string; modelId?: string }>>;
-  }
-): Pick<VideoToObsidianSettings, 'aiProvider' | 'aiApiKey' | 'aiModelId'> {
-  if (loaded.aiProvider) {
-    return {
-      aiProvider: loaded.aiProvider,
-      aiApiKey: loaded.aiApiKey ?? defaults.aiApiKey,
-      aiModelId: loaded.aiModelId ?? defaults.aiModelId
-    };
-  }
-
-  const providers: SupportedProvider[] = ['mistral', 'google', 'anthropic', 'openai'];
-  for (const provider of providers) {
-    const providerSettings = loaded.providers?.[provider];
-    if (providerSettings?.apiKey?.trim()) {
-      return {
-        aiProvider: provider,
-        aiApiKey: providerSettings.apiKey.trim(),
-        aiModelId: providerSettings.modelId?.trim() ?? defaults.aiModelId
-      };
-    }
-  }
-
-  return {
-    aiProvider: defaults.aiProvider,
-    aiApiKey: defaults.aiApiKey,
-    aiModelId: defaults.aiModelId
   };
 }
