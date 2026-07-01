@@ -1,0 +1,25 @@
+src/adapters/obsidian/settings.ts
+  s_4fe43bd969ef10::t_8a4430d7152eb5 16-18
+  s_4fe43bd969ef10::t_970be2e9d7cc96 15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.8",
+  "base_commit_sha": "2a7ff9d91fd7cbfc4db5759863d2cd0714004fc3",
+  "prompts": {},
+  "humans": {
+    "h_1a3147ea652b40": {
+      "author": "Yannick Grenzinger <yannick.grenzinger@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_4fe43bd969ef10": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f1e11-d614-7713-b1e4-9f88764e0222",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Yannick Grenzinger <yannick.grenzinger@gmail.com>"
+    }
+  }
+}
